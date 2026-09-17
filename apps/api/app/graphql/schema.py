@@ -1,11 +1,10 @@
 import strawberry
 from strawberry.tools import merge_types
 
-from app.bananas.resolvers import BananaMutation, BananaQuery
-from app.farms.resolvers import FarmQuery
+@strawberry.type
+class Query:
+    @strawberry.field
+    def hello(self) -> str:
+        return "Hello World"
 
-# Composition root: el único archivo que sabe qué features existen (≈ AppModule)
-Query = merge_types("Query", (BananaQuery, FarmQuery))
-Mutation = merge_types("Mutation", (BananaMutation,))
-
-schema = strawberry.Schema(query=Query, mutation=Mutation)
+schema = strawberry.Schema(query=Query)

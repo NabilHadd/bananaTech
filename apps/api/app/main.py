@@ -5,6 +5,10 @@ from strawberry.fastapi import GraphQLRouter
 from app.core.config import get_settings
 from app.core.context import build_context
 from app.graphql.schema import schema
+from app.core.db import engine
+
+# Importar models para que SQLModel.metadata reconozca todas las tablas
+import app.models  # noqa
 
 settings = get_settings()
 
