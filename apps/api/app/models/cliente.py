@@ -15,7 +15,7 @@ class ClienteCentro(SQLModel, table=True):
 class Cliente(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     razon: str = Field(description="Nombre de la empresa")
-    rut: str
+    rut: str = Field(unique=True)
     direccion: Optional[str] = Field(default=None, description="Dirección de la empresa (solo informativo)")
     mail: Optional[str] = Field(default=None, unique=True)
     telefono: Optional[str] = Field(default=None, unique=True)

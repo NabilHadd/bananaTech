@@ -1,9 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, List
+from typing import TYPE_CHECKING, Optional, List
 
 from sqlmodel import Field, SQLModel, Relationship
+
+from app.models.conductor import ClaseLicenciaTipoCamion
+
+if TYPE_CHECKING:
+    from app.models.conductor import ClaseLicencia
 
 
 class DocumentoTipo(str, Enum):
@@ -14,32 +19,25 @@ class DocumentoTipo(str, Enum):
     CEC = "CEC"
 
 
-class CamionTipo(str, Enum):
-    # Tipos de camiones genéricos. Se puede ajustar según negocio.
-    REFRIGERADO = "Refrigerado"
-    TOLVA = "Tolva"
-    PLANA = "Plana"
-    RAMPLA = "Rampla"
-
-
 class TipoCamion(SQLModel, table=True):
     __tablename__ = "tipo_camion"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    # Según la doc, tiene un enum camion_tipo único. 
+    # Catálogo: los tipos se agregan como filas, no como valores de un enum,
+    # para no requerir migración cada vez que el negocio suma uno nuevo.
     tipo: str = Field(unique=True, description="Tipo del camión (ej. Tolva, Rampla, etc.)")
     
     camiones: List["Camion"] = Relationship(back_populates="tipo_camion")
     clases_licencia: List["ClaseLicencia"] = Relationship(
         back_populates="tipos_camion",
-        link_model="ClaseLicenciaTipoCamion"
+        link_model=ClaseLicenciaTipoCamion
     )
 
 
 class Camion(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    patente: str
-    id_tipo: int = Field(foreign_key="tipo_camion.id")
+    patente: str = Field(unique=True)
+    id_tipo_camion: int = Field(foreign_key="tipo_camion.id")
     peso_kg: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     volumen_m3: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     
@@ -49,7 +47,8 @@ class Camion(SQLModel, table=True):
 
 class Documento(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    # Nota: la doc decía FK centro_distribucion.id, pero por nombre y contexto es camion.id
+    # La doc decía FK centro_distribucion.id; confirmado con el equipo que es un typo,
+    # un documento pertenece a un camión.
     id_camion: int = Field(foreign_key="camion.id")
     tipo: DocumentoTipo
     fecha_emision: datetime

@@ -52,7 +52,7 @@ class Pedido(SQLModel, table=True):
 
 class Carga(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    id_CD: int = Field(foreign_key="centro_distribucion.id")
+    id_centro: int = Field(foreign_key="centro_distribucion.id")
     estado: CargaEstado
     
     # Relación con Pedido a través de PedidoCarga
