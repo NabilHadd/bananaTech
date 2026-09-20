@@ -151,6 +151,20 @@ ENUM, `\q` sale. Credenciales para DBeaver/pgAdmin: las del `.env`.
 migración, no a mano. El modelo está documentado en el MER y la Documentación DB,
 que el equipo mantiene fuera de este repo.
 
+Para regenerar los datos mock de la base de datos ejecutar lo siguiente:
+
+```bash
+docker compose exec api uv run --no-dev alembic upgrade head
+```
+
+En caso de querer reiniciar la base de datos completa con todo y mock, se debe ejecutar lo siguiente:
+
+```bash
+docker compose down -v
+docker compose up -d
+docker compose exec api uv run --no-dev alembic upgrade head
+```
+
 ---
 
 ## Estructura
