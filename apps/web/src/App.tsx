@@ -8,16 +8,75 @@ import { ConductoresView } from './components/ConductoresView';
 import { RutasViajesView } from './components/RutasViajesView';
 import { MantenimientoView } from './components/MantenimientoView';
 import { ConfiguracionView } from './components/ConfiguracionView';
-import { AlertCircle, AlertTriangle, ShieldAlert, ArrowRight } from 'lucide-react';
+import { AssignmentModal } from './components/AssignmentModal';
+import { AlertCircle, AlertTriangle, ShieldAlert, ArrowRight, Check } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isAssignmentOpen, setIsAssignmentOpen] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('tnc_sidebar_open');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('tnc_sidebar_open', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   return (
-    <div className="app-container">
-      <Sidebar activeTab={activeTab} onSelectTab={setActiveTab} />
+    <div className="app-container" style={{ position: 'relative' }}>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 9999,
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--accent-primary)',
+          color: 'var(--text-primary)',
+          padding: '0.85rem 1.25rem',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-glow)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontSize: '0.875rem'
+        }}>
+          <Check size={18} color="var(--status-success)" />
+          {toastMessage}
+        </div>
+      )}
+
+      <Sidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        isOpen={isSidebarOpen}
+        onToggle={handleToggleSidebar}
+      />
       <main className="main-content">
-        <TopBar />
+        <TopBar
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={handleToggleSidebar}
+        />
         <div className="page-content">
           {activeTab === 'dashboard' && (
             <div>
@@ -30,7 +89,7 @@ const App: React.FC = () => {
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button onClick={() => setActiveTab('rutas')} className="btn btn-primary">
+                  <button onClick={() => setIsAssignmentOpen(true)} className="btn btn-primary">
                     + Nueva Asignación
                   </button>
                 </div>
@@ -138,6 +197,17 @@ const App: React.FC = () => {
           {activeTab === 'configuracion' && <ConfiguracionView />}
         </div>
       </main>
+
+      {/* MODAL: Nueva Asignación con exclusión HU 1.2 */}
+      {isAssignmentOpen && (
+        <AssignmentModal
+          onClose={() => setIsAssignmentOpen(false)}
+          onSuccess={(msg) => {
+            showToast(msg);
+            setIsAssignmentOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

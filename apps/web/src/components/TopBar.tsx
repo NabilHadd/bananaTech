@@ -1,7 +1,15 @@
 import React from 'react';
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Search, User, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
-export const TopBar: React.FC = () => {
+interface TopBarProps {
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+}
+
+export const TopBar: React.FC<TopBarProps> = ({
+  isSidebarOpen = true,
+  onToggleSidebar
+}) => {
   return (
     <header style={{
       height: '70px',
@@ -10,9 +18,35 @@ export const TopBar: React.FC = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 2rem'
+      padding: '0 1.75rem',
+      position: 'relative',
+      zIndex: 15
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '300px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.45rem 0.65rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontSize: '0.8125rem',
+              fontWeight: 500,
+              backgroundColor: !isSidebarOpen ? 'var(--accent-glow)' : 'rgba(255, 255, 255, 0.04)',
+              color: !isSidebarOpen ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              borderColor: !isSidebarOpen ? 'rgba(59, 130, 246, 0.4)' : 'var(--border-color)',
+            }}
+            title={isSidebarOpen ? "Cerrar menú lateral" : "Abrir menú lateral"}
+            aria-label={isSidebarOpen ? "Cerrar menú lateral" : "Abrir menú lateral"}
+          >
+            {isSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+            {!isSidebarOpen && <span>Menú</span>}
+          </button>
+        )}
+
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -21,7 +55,7 @@ export const TopBar: React.FC = () => {
           padding: '0.5rem 1rem',
           borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--border-color)',
-          width: '100%'
+          width: '280px'
         }}>
           <Search size={16} color="var(--text-tertiary)" />
           <input 

@@ -7,7 +7,7 @@ export const RutasViajesView: React.FC = () => {
   const [subTab, setSubTab] = useState<'cargas' | 'pedidos' | 'rutas'>('cargas');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="page-view-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>

@@ -37,9 +37,15 @@ class TipoCamion(SQLModel, table=True):
 class Camion(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     patente: str = Field(unique=True)
+    marca: str = Field(default="Genérica", description="Marca del camión (ej. Scania, Volvo)")
+    modelo: str = Field(default="Genérico", description="Modelo del camión (ej. R450, FH 500)")
+    anio: int = Field(default=2022, ge=1990, le=2030, description="Año de fabricación")
     id_tipo_camion: int = Field(foreign_key="tipo_camion.id")
     peso_kg: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     volumen_m3: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    rendimiento_base_km_l: Decimal = Field(default=Decimal("3.0"), gt=0, max_digits=5, decimal_places=2, description="Rendimiento base en km/L")
+    kilometraje_actual: int = Field(default=0, ge=0, description="Kilometraje actual")
+    activo: bool = Field(default=True, description="Indicador de baja lógica (RNF-06)")
     
     tipo_camion: Optional[TipoCamion] = Relationship(back_populates="camiones")
     documentos: List["Documento"] = Relationship(back_populates="camion")

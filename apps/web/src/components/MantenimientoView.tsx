@@ -1,20 +1,66 @@
-import React from 'react';
-import { CAMIONES } from '../data/mockData';
-import { Wrench, AlertTriangle, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import type { Camion } from '../data/mockData';
+import { useCamionesState } from '../data/mockData';
+import { DocumentModal } from './DocumentModal';
+import { Wrench, AlertTriangle, ShieldCheck, ShieldAlert, FileText, CheckCircle } from 'lucide-react';
 
 export const MantenimientoView: React.FC = () => {
-  // Extract all documents across trucks
-  const allDocs = CAMIONES.flatMap((camion) =>
+  const [camiones] = useCamionesState();
+  const [selectedTarget, setSelectedTarget] = useState<{
+    camion: Camion;
+    tipo: 'RT' | 'PC' | 'SOAP' | 'PADRON' | 'CEC';
+  } | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Extract all documents across trucks dynamically
+  const allDocs = camiones.flatMap((camion) =>
     camion.documentos.map((doc) => ({
       ...doc,
+      camionId: camion.id,
       camionPatente: camion.patente,
       camionCodigo: camion.codigo,
-      camionTipo: camion.tipo
+      camionTipo: camion.tipo,
+      camionRef: camion
     }))
   );
 
+  const expiredDocs = allDocs.filter((d) => d.vencido);
+  const validDocs = allDocs.filter((d) => !d.vencido);
+
+  const handleOpenDocModal = (camion: Camion, tipo: 'RT' | 'PC' | 'SOAP' | 'PADRON' | 'CEC') => {
+    setSelectedTarget({ camion, tipo });
+  };
+
+  const handleSuccess = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="page-view-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
+      {/* Toast Alert Notification */}
+      {toastMessage && (
+        <div className="toast-enter" style={{
+          position: 'fixed',
+          top: '1.5rem',
+          right: '1.5rem',
+          zIndex: 1100,
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-md)',
+          padding: '0.85rem 1.25rem',
+          boxShadow: 'var(--shadow-lg)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          color: 'var(--text-primary)',
+          fontSize: '0.875rem'
+        }}>
+          <CheckCircle size={18} color="var(--accent-primary)" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
@@ -32,27 +78,52 @@ export const MantenimientoView: React.FC = () => {
 
       {/* Critical Document Alerts Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-        <div className="glass-panel" style={{
-          padding: '1.25rem',
-          borderLeft: '4px solid var(--status-error)',
-          backgroundColor: 'var(--status-error-bg)',
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'flex-start'
-        }}>
-          <ShieldAlert size={28} color="var(--status-error)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
-          <div>
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-              1 Documento Expirado (Alerta Crítica)
+        {expiredDocs.length > 0 ? (
+          <div className="glass-panel" style={{
+            padding: '1.25rem',
+            borderLeft: '4px solid var(--status-error)',
+            backgroundColor: 'var(--status-error-bg)',
+            display: 'flex',
+            gap: '1rem',
+            alignItems: 'flex-start'
+          }}>
+            <ShieldAlert size={28} color="var(--status-error)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                {expiredDocs.length} Documento{expiredDocs.length > 1 ? 's' : ''} Expirado{expiredDocs.length > 1 ? 's' : ''} (Alerta Crítica)
+              </div>
+              <p style={{ margin: '0.35rem 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                Camión <strong>{expiredDocs[0].camionPatente}</strong> ({expiredDocs[0].camionTipo}) tiene su {expiredDocs[0].nombre} vencida desde <strong>{expiredDocs[0].fechaVencimiento}</strong>. El vehículo se encuentra automáticamente bloqueado para asignación a viajes (RN-05).
+              </p>
+              <button
+                className="btn btn-secondary"
+                onClick={() => handleOpenDocModal(expiredDocs[0].camionRef, expiredDocs[0].tipo)}
+                style={{ marginTop: '0.5rem', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+              >
+                Subir Renovación Inmediata
+              </button>
             </div>
-            <p style={{ margin: '0.35rem 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              Camión <strong>EFGH-34</strong> (Semirremolque) tiene su Revisión Técnica vencida desde <strong>01/06/2025</strong>. El camión se encuentra bloqueado para asignación.
-            </p>
-            <button className="btn btn-secondary" style={{ marginTop: '0.5rem', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
-              Subir Renovación
-            </button>
           </div>
-        </div>
+        ) : (
+          <div className="glass-panel" style={{
+            padding: '1.25rem',
+            borderLeft: '4px solid var(--status-success)',
+            backgroundColor: 'var(--status-success-bg)',
+            display: 'flex',
+            gap: '1rem',
+            alignItems: 'flex-start'
+          }}>
+            <ShieldCheck size={28} color="var(--status-success)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                Sin Documentos Vencidos
+              </div>
+              <p style={{ margin: '0.35rem 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                Toda la flota tiene sus revisiones técnicas, permisos de circulación y SOAP al día.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="glass-panel" style={{
           padding: '1.25rem',
@@ -65,10 +136,10 @@ export const MantenimientoView: React.FC = () => {
           <ShieldCheck size={28} color="var(--status-success)" style={{ flexShrink: 0, marginTop: '0.2rem' }} />
           <div>
             <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-              8 Documentos al Día
+              {validDocs.length} Documentos al Día
             </div>
             <p style={{ margin: '0.35rem 0', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              Camiones <strong>ABCD-12</strong> y <strong>IJKL-56</strong> cumplen con todos los requisitos de circulación vigentes (RT, PC y SOAP válidos hasta 2027).
+              Vehículos habilitados cumplen con los requisitos de circulación vigentes (RT, PC y SOAP válidos).
             </p>
           </div>
         </div>
@@ -77,7 +148,7 @@ export const MantenimientoView: React.FC = () => {
       {/* Document Status Table */}
       <div className="glass-panel" style={{ padding: '1.5rem' }}>
         <h2 style={{ fontSize: '1.125rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <FileText size={18} color="var(--accent-primary)" /> Estado de Documentación Obligatoria (RF-103)
+          <FileText size={18} color="var(--accent-primary)" /> Estado de Documentación Obligatoria
         </h2>
 
         <div className="table-container">
@@ -94,7 +165,7 @@ export const MantenimientoView: React.FC = () => {
             </thead>
             <tbody>
               {allDocs.map((doc, idx) => (
-                <tr key={idx}>
+                <tr key={`${doc.camionId}-${doc.tipo}-${idx}`}>
                   <td>
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{doc.camionPatente}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{doc.camionTipo} ({doc.camionCodigo})</div>
@@ -127,7 +198,11 @@ export const MantenimientoView: React.FC = () => {
                     )}
                   </td>
                   <td>
-                    <button className="btn btn-secondary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleOpenDocModal(doc.camionRef, doc.tipo)}
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                    >
                       Actualizar
                     </button>
                   </td>
@@ -197,6 +272,17 @@ export const MantenimientoView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Document Renewal Modal */}
+      {selectedTarget && (
+        <DocumentModal
+          camion={selectedTarget.camion}
+          initialDocTipo={selectedTarget.tipo}
+          onClose={() => setSelectedTarget(null)}
+          onSuccess={handleSuccess}
+        />
+      )}
     </div>
   );
 };
+
