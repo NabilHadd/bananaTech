@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated
 
 from fastapi import Depends
@@ -17,6 +18,7 @@ class Context(BaseContext):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__()
         self.session = session
+        self.session_lock = asyncio.Lock()
 
 
 async def build_context(

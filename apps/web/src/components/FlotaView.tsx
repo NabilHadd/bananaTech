@@ -1,21 +1,129 @@
-import React, { useState } from 'react';
-import { CAMIONES } from '../data/mockData';
-import type { Camion } from '../data/mockData';
-import { Truck, Search, AlertCircle, CheckCircle2, ShieldAlert, Weight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, Pencil, Plus, Search, ShieldAlert, Trash2, Truck, Weight } from 'lucide-react';
+import {
+  createTruck,
+  deleteTruck,
+  getFleet,
+  setTruckActive,
+  updateTruck,
+} from '../lib/fleetApi';
+import type { CamionFlota, TipoCamionFlota } from '../lib/fleetApi';
+
+interface CamionForm {
+  patente: string;
+  idTipoCamion: string;
+  pesoKg: string;
+  volumenM3: string;
+}
+
+const EMPTY_FORM: CamionForm = {
+  patente: '',
+  idTipoCamion: '',
+  pesoKg: '',
+  volumenM3: '',
+};
 
 export const FlotaView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('todos');
   const [filterState, setFilterState] = useState<string>('todos');
+  const [camiones, setCamiones] = useState<CamionFlota[]>([]);
+  const [tiposCamion, setTiposCamion] = useState<TipoCamionFlota[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<CamionForm>(EMPTY_FORM);
+  const [editing, setEditing] = useState<CamionFlota | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
-  const filteredCamiones = CAMIONES.filter((camion) => {
-    const matchesSearch =
-      camion.patente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      camion.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      camion.tipo.toLowerCase().includes(searchTerm.toLowerCase());
+  useEffect(() => {
+    let active = true;
+    void getFleet()
+      .then((data) => {
+        if (!active) return;
+        setCamiones(data.camiones);
+        setTiposCamion(data.tiposCamion);
+      })
+      .catch((loadError: unknown) => {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'No se pudo cargar la flota');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
-    const matchesType = filterType === 'todos' || camion.tipo === filterType;
-    const matchesState = filterState === 'todos' || camion.estado === filterState;
+  const closeForm = () => {
+    setEditing(null);
+    setForm(EMPTY_FORM);
+    setShowForm(false);
+  };
+
+  const openEdit = (camion: CamionFlota) => {
+    setEditing(camion);
+    setShowForm(true);
+    setForm({
+      patente: camion.patente,
+      idTipoCamion: String(camion.idTipoCamion),
+      pesoKg: camion.pesoKg,
+      volumenM3: camion.volumenM3,
+    });
+    setError(null);
+  };
+
+  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const input = {
+        patente: form.patente.trim().toUpperCase(),
+        idTipoCamion: Number(form.idTipoCamion),
+        pesoKg: Number(form.pesoKg),
+        volumenM3: Number(form.volumenM3),
+      };
+      const camion = editing
+        ? await updateTruck(editing.id, input)
+        : await createTruck(input);
+      setCamiones((current) => editing
+        ? current.map((item) => item.id === camion.id ? camion : item)
+        : [...current, camion].sort((left, right) => left.patente.localeCompare(right.patente)));
+      closeForm();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'No se pudo guardar el camión');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleActiveChange = async (camion: CamionFlota) => {
+    setError(null);
+    try {
+      const updated = await setTruckActive(camion.id, !camion.activo);
+      setCamiones((current) => current.map((item) => item.id === updated.id ? updated : item));
+    } catch (toggleError) {
+      setError(toggleError instanceof Error ? toggleError.message : 'No se pudo cambiar el estado');
+    }
+  };
+
+  const handleDelete = async (camion: CamionFlota) => {
+    setError(null);
+    try {
+      await deleteTruck(camion.id);
+      setCamiones((current) => current.filter((item) => item.id !== camion.id));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'No se pudo eliminar el camión');
+    }
+  };
+
+  const filteredCamiones = camiones.filter((camion) => {
+    const tipo = tiposCamion.find((item) => item.id === camion.idTipoCamion)?.tipo ?? '';
+    const matchesSearch = `${camion.patente} ${tipo}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'todos' || String(camion.idTipoCamion) === filterType;
+    const matchesState = filterState === 'todos' ||
+      (filterState === 'habilitado' && camion.activo && camion.habilitado) ||
+      (filterState === 'restringido' && camion.activo && !camion.habilitado) ||
+      (filterState === 'inactivo' && !camion.activo);
 
     return matchesSearch && matchesType && matchesState;
   });
@@ -29,13 +137,54 @@ export const FlotaView: React.FC = () => {
             <Truck color="var(--accent-primary)" /> Gestión de Flota
           </h1>
           <p className="text-muted">
-            Monitoreo técnico, capacidades y habilitación legal de camiones (datos de demostración)
+            Estado operativo, capacidad y documentación legal por vehículo
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-primary">+ Registrar Camión</button>
+          <button
+            className="btn btn-primary"
+            onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); setError(null); }}
+          >
+            <Plus size={16} /> Registrar camión
+          </button>
         </div>
       </div>
+
+      {error && (
+        <div role="alert" className="glass-panel" style={{ padding: '0.85rem 1rem', color: 'var(--status-error)', borderColor: 'var(--status-error)' }}>
+          {error}
+        </div>
+      )}
+
+      {showForm && (
+        <form onSubmit={handleSave} className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+          <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.8rem' }}>
+            Patente
+            <input required maxLength={12} value={form.patente} onChange={(event) => setForm({ ...form, patente: event.target.value })} />
+          </label>
+          <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.8rem' }}>
+            Tipo de camión
+            <select required value={form.idTipoCamion} onChange={(event) => setForm({ ...form, idTipoCamion: event.target.value })}>
+              <option value="">Seleccionar tipo</option>
+              {tiposCamion.map((tipo) => <option key={tipo.id} value={tipo.id}>{tipo.tipo}</option>)}
+            </select>
+          </label>
+          <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.8rem' }}>
+            Peso máximo (kg)
+            <input required min="0.01" step="0.01" type="number" value={form.pesoKg} onChange={(event) => setForm({ ...form, pesoKg: event.target.value })} />
+          </label>
+          <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.8rem' }}>
+            Volumen máximo (m³)
+            <input required min="0.01" step="0.01" type="number" value={form.volumenM3} onChange={(event) => setForm({ ...form, volumenM3: event.target.value })} />
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear camión'}</button>
+            <button type="button" className="btn btn-secondary" onClick={closeForm}>Cancelar</button>
+          </div>
+        </form>
+      )}
+
+      {loading && <p className="text-muted">Cargando flota…</p>}
 
       {/* Filters Bar */}
       <div className="glass-panel" style={{ padding: '1rem 1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -74,9 +223,7 @@ export const FlotaView: React.FC = () => {
               }}
             >
               <option value="todos">Todos los tipos</option>
-              <option value="Rampla plana">Rampla plana</option>
-              <option value="Semirremolque">Semirremolque</option>
-              <option value="3/4">3/4</option>
+              {tiposCamion.map((tipo) => <option key={tipo.id} value={tipo.id}>{tipo.tipo}</option>)}
             </select>
           </div>
 
@@ -96,8 +243,9 @@ export const FlotaView: React.FC = () => {
               }}
             >
               <option value="todos">Todos</option>
-              <option value="Disponible">Disponible</option>
-              <option value="Bloqueado">Bloqueado</option>
+              <option value="habilitado">Habilitado</option>
+              <option value="restringido">Con restricciones</option>
+              <option value="inactivo">Desactivado</option>
             </select>
           </div>
         </div>
@@ -112,14 +260,13 @@ export const FlotaView: React.FC = () => {
                 <th>Código / Patente</th>
                 <th>Tipo de Camión</th>
                 <th>Capacidad Carga</th>
-                <th>Rendimiento & Km</th>
                 <th>Documentación Legal</th>
                 <th>Estado Operativo</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredCamiones.map((camion: Camion) => (
+              {filteredCamiones.map((camion) => (
                 <tr key={camion.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -127,21 +274,18 @@ export const FlotaView: React.FC = () => {
                         width: '36px',
                         height: '36px',
                         borderRadius: 'var(--radius-md)',
-                        backgroundColor: camion.estado === 'Bloqueado' ? 'var(--status-error-bg)' : 'var(--accent-glow)',
-                        color: camion.estado === 'Bloqueado' ? 'var(--status-error)' : 'var(--accent-primary)',
+                        backgroundColor: !camion.activo || !camion.habilitado ? 'var(--status-error-bg)' : 'var(--accent-glow)',
+                        color: !camion.activo || !camion.habilitado ? 'var(--status-error)' : 'var(--accent-primary)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontWeight: 600
                       }}>
-                        {camion.codigo.split('-')[1]}
+                        {camion.patente.slice(-2)}
                       </div>
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.05em' }}>
                           {camion.patente}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                          {camion.codigo}
                         </div>
                       </div>
                     </div>
@@ -155,24 +299,18 @@ export const FlotaView: React.FC = () => {
                       color: 'var(--text-secondary)',
                       fontSize: '0.8125rem'
                     }}>
-                      {camion.tipo}
+                      {tiposCamion.find((tipo) => tipo.id === camion.idTipoCamion)?.tipo ?? 'Sin tipo'}
                     </span>
                   </td>
                   <td>
                     <div>
                       <div style={{ fontSize: '0.875rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         <Weight size={14} color="var(--text-secondary)" />
-                        {camion.pesoMaxKg.toLocaleString('es-CL')} kg
+                        {Number(camion.pesoKg).toLocaleString('es-CL')} kg
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                        Volumen: {camion.volumenMaxM3} m³
+                        Volumen: {camion.volumenM3} m³
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: '0.875rem' }}>{camion.rendimientoKmLEstimado} km/L</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                      {camion.kilometraje.toLocaleString('es-CL')} km
                     </div>
                   </td>
                   <td>
@@ -180,44 +318,52 @@ export const FlotaView: React.FC = () => {
                       {camion.documentos.map((doc) => (
                         <span
                           key={doc.id}
-                          title={`${doc.nombre} - Vence: ${doc.fechaVencimiento}`}
+                          title={`Vence: ${doc.fechaVencimiento}`}
                           style={{
                             fontSize: '0.7rem',
                             padding: '0.15rem 0.45rem',
                             borderRadius: '4px',
                             fontWeight: 600,
-                            backgroundColor: doc.vencido ? 'var(--status-error-bg)' : 'rgba(255,255,255,0.05)',
-                            color: doc.vencido ? 'var(--status-error)' : 'var(--text-secondary)',
-                            border: doc.vencido ? '1px solid var(--status-error)' : '1px solid var(--border-color)'
+                            backgroundColor: doc.vigente ? 'rgba(255,255,255,0.05)' : 'var(--status-error-bg)',
+                            color: doc.vigente ? 'var(--text-secondary)' : 'var(--status-error)',
+                            border: doc.vigente ? '1px solid var(--border-color)' : '1px solid var(--status-error)'
                           }}
                         >
-                          {doc.tipo} {doc.vencido ? '⚠ Vencido' : '✓'}
+                          {doc.tipo} {doc.vigente ? '✓' : 'Vencido'}
                         </span>
                       ))}
                     </div>
                   </td>
                   <td>
-                    {camion.estado === 'Disponible' ? (
+                    {camion.activo && camion.habilitado ? (
                       <span className="badge badge-success" style={{ display: 'inline-flex', gap: '0.35rem' }}>
-                        <CheckCircle2 size={12} /> Disponible
+                        <CheckCircle2 size={12} /> Habilitado
                       </span>
                     ) : (
                       <div>
                         <span className="badge badge-error" style={{ display: 'inline-flex', gap: '0.35rem' }}>
-                          <ShieldAlert size={12} /> Bloqueado
+                          <ShieldAlert size={12} /> {!camion.activo ? 'Desactivado' : 'No habilitado'}
                         </span>
-                        {camion.motivoBloqueo && (
+                        {camion.restricciones.length > 0 && (
                           <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.75rem', color: 'var(--status-error)', maxWidth: '200px', lineHeight: 1.2 }}>
-                            {camion.motivoBloqueo}
+                            {camion.restricciones.join('; ')}
                           </p>
                         )}
                       </div>
                     )}
                   </td>
                   <td>
-                    <button className="btn btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
-                      Detalles
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button type="button" className="btn btn-secondary" title="Editar camión" onClick={() => openEdit(camion)}>
+                        <Pencil size={14} />
+                      </button>
+                      <button type="button" className="btn btn-secondary" title="Eliminar camión" onClick={() => void handleDelete(camion)}>
+                        <Trash2 size={14} />
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => void handleActiveChange(camion)}>
+                        {camion.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

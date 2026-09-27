@@ -11,7 +11,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
     { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { id: 'flota', icon: <Truck size={20} />, label: 'Flota', alertCount: 1 },
     { id: 'conductores', icon: <Users size={20} />, label: 'Conductores', alertCount: 1 },
-    { id: 'rutas', icon: <Map size={20} />, label: 'Rutas & Viajes', alertCount: 1 },
+    { id: 'rutas', icon: <Map size={20} />, label: 'Pedidos y Viajes', alertCount: 1 },
     { id: 'mantenimiento', icon: <Wrench size={20} />, label: 'Mantenimiento', alertCount: 1 },
   ];
 

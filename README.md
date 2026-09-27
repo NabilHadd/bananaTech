@@ -3,8 +3,8 @@
 Monorepo del ERP de transporte: API GraphQL en Python (`apps/api`) y dashboard en
 React (`apps/web`).
 
-> **Estado:** backend con modelos y migraciones listos; el schema GraphQL todavía
-> es el de ejemplo. El frontend está con datos mock.
+> **Estado:** API GraphQL en desarrollo; Flota y Mantenimiento usan la API, mientras
+> otras vistas del frontend todavía contienen datos mock.
 
 ---
 
@@ -28,16 +28,27 @@ Docker con Compose. Para trabajar en el código además: `uv` y Node 24.
 
 ## Levantar el entorno
 
+Con Docker Desktop iniciado, desde la raíz del repositorio en PowerShell:
+
 ```bash
-cp .env.example .env          # sólo la primera vez
-docker compose up -d
+Copy-Item .env.example .env    # sólo la primera vez
+docker compose up --build -d
 ```
 
-Levanta `db` (PostgreSQL) y `api`. Verifica con `docker compose ps` que `db` diga
-`(healthy)`.
+Compose levanta PostgreSQL (`db`), aplica las migraciones (`migrate`), inicia la
+API y arranca el frontend Vite (`web`). La web y la API montan el código del host
+para recarga en caliente; esta configuración está orientada a desarrollo.
+
+Comprueba los servicios y sus logs:
+
+```bash
+docker compose ps
+docker compose logs -f web api migrate
+```
 
 | Servicio | URL |
 | --- | --- |
+| Dashboard | http://localhost:5173 |
 | GraphQL | http://localhost:8000/graphql |
 | Health | http://localhost:8000/health |
 | PostgreSQL | `localhost:5433` |
@@ -45,12 +56,20 @@ Levanta `db` (PostgreSQL) y `api`. Verifica con `docker compose ps` que `db` dig
 > El puerto es **5433**, no 5432, para no chocar con un PostgreSQL instalado en el
 > sistema.
 
+Para aplicar migraciones manualmente después de modificar el esquema:
+
+```bash
+docker compose run --rm migrate
+```
+
 ---
 
 ## Migraciones
 
 El volumen de datos es local de cada máquina: por git viajan los archivos de
-migración, no los datos. **Después de cada `git pull`, aplica lo pendiente:**
+migración, no los datos. El primer `docker compose up` aplica las revisiones
+pendientes antes de iniciar la API. Si agregas migraciones con los contenedores
+ya levantados, ejecútalas con:
 
 ```bash
 docker compose exec api uv run --no-dev alembic upgrade head
@@ -80,7 +99,8 @@ docker compose down     # elimina contenedores; CONSERVA los datos
 docker compose down -v  # elimina también el volumen: borra la base entera
 ```
 
-Tras un `down -v` hay que volver a aplicar las migraciones.
+Tras un `down -v`, el siguiente `docker compose up --build -d` crea la base nueva
+y vuelve a aplicar todas las migraciones automáticamente.
 
 ---
 
@@ -124,7 +144,9 @@ En VS Code, después del `uv sync`: `Ctrl+Shift+P` → *Python: Select Interpret
 
 ### Frontend
 
-No está dockerizado: corre directo en tu máquina.
+El frontend corre en el servicio `web` de Compose. Su código está montado desde
+`apps/web`, así que Vite recarga los cambios automáticamente. Para ejecutarlo
+fuera de Docker (opcional):
 
 ```bash
 cd apps/web
@@ -183,9 +205,9 @@ docker-compose.yml
 
 ## GraphQL: clientes, pedidos y cargas
 
-El backend permite consultar y administrar clientes y pedidos desde
-`http://localhost:8000/graphql`. Las consultas disponibles incluyen `clientes`,
-`cliente(id)`, `pedidos(idCliente, estado)`, `pedido(id)` y `cargas(estado)`.
+El backend permite consultar y administrar datos desde `http://localhost:8000/graphql`.
+Las consultas incluyen `clientes`, `pedidos`, `camiones`, `camion(id)`,
+`tiposCamion`, `mantenciones(idCamion, estado)` y `cargas(estado)`.
 Los campos de entrada usan `idCliente`, `pesoKg`, `ventanaInicio`,
 `tipoMercaderia`, según la conversión automática de Strawberry a camelCase.
 
@@ -220,13 +242,33 @@ se cancela una carga en ruta, sus pedidos vuelven a `EN_ESPERA`.
 Antes de crear una carga, `calcularCargaValida(camionId, centroId)` devuelve una
 propuesta no persistida para el camión y centro elegidos. Considera pedidos en
 espera de clientes asociados activamente al centro, excluye pedidos ligados a
-cargas no canceladas,
-prioriza las ventanas cercanas y respeta capacidad y compatibilidad. La respuesta
-incluye la ocupación de peso/volumen y los pedidos no asignados con su motivo.
+cargas no canceladas, prioriza las ventanas cercanas y respeta capacidad y
+compatibilidad. La respuesta incluye la ocupación de peso/volumen y los pedidos
+no asignados con su motivo.
 La selección es una heurística voraz, no una optimización exacta; el planificador
 confirma la selección con `crearCarga`.
 
+### Flota
+
+`crearCamion` y `actualizarCamion` gestionan las características de las unidades;
+`cambiarEstadoCamion(id, activo)` las activa o desactiva sin borrar su historial.
+La consulta `camiones` devuelve documentos, mantenciones, `habilitado` y las
+`restricciones` que impiden operar.
+
+Los documentos se gestionan con `registrarDocumento`, `actualizarDocumento` y
+`eliminarDocumento`. Cada camión necesita RT, PC y SOAP vigentes durante todo el
+intervalo de la operación.
+
+`programarMantencion` registra mantenciones preventivas/correctivas y evita
+solapamientos con otras mantenciones o cargas asignadas. Sus transiciones son
+`PROGRAMADA → EN_CURSO → COMPLETADA` o `PROGRAMADA → CANCELADA`.
+
+El cálculo, `crearCarga`, `asignarCamionCarga` y la transición a `EN_RUTA` vuelven
+a validar habilitación y capacidad para impedir que otra mutation omita las
+restricciones. Las cargas antiguas con `idCamion = null` deben recibir asignación
+explícita antes de salir.
+
 ## Pendientes
 
-1. Conectar el frontend a la API (actualmente usa datos mock).
+1. Conectar las vistas de dashboard, conductores y rutas/pedidos a la API; las pantallas de Flota y Mantenimiento ya consumen GraphQL.
 2. Añadir pruebas de integración con PostgreSQL para las operaciones GraphQL.

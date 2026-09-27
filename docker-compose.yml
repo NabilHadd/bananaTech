@@ -5,9 +5,9 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-bananatech}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cambiame}
+      POSTGRES_DB: ${POSTGRES_DB:-bananatech}
     ports:
       # 5432 del host suele estar tomado por un Postgres local: se expone en 5433.
       - "${POSTGRES_PORT:-5433}:5432"
@@ -27,11 +27,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       # Dentro de la red de compose el host de la base es "db", no "localhost",
       # y el puerto es el 5432 interno (no el mapeado al host).
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-bananatech}:${POSTGRES_PASSWORD:-cambiame}@db:5432/${POSTGRES_DB:-bananatech}
       DEBUG: ${DEBUG:-true}
+      CORS_ORIGINS: '["http://localhost:${WEB_PORT:-5173}"]'
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -40,6 +43,34 @@ services:
       # Volumen anónimo: evita que el .venv del host pise el de la imagen.
       - /app/.venv
     command: uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  migrate:
+    build: ./apps/api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-bananatech}:${POSTGRES_PASSWORD:-cambiame}@db:5432/${POSTGRES_DB:-bananatech}
+    volumes:
+      - ./apps/api:/app
+      - /app/.venv
+    command: uv run --no-dev alembic upgrade head
+    restart: "no"
+
+  web:
+    build: ./apps/web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      VITE_API_URL: http://localhost:${API_PORT:-8000}/graphql
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   postgres_data:

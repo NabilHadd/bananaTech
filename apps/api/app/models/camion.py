@@ -9,6 +9,7 @@ from app.models.conductor import ClaseLicenciaTipoCamion
 
 if TYPE_CHECKING:
     from app.models.conductor import ClaseLicencia
+    from app.models.mantencion import Mantencion
 
 
 class DocumentoTipo(StrEnum):
@@ -17,6 +18,13 @@ class DocumentoTipo(StrEnum):
     PC = "PC"
     PADRON = "PADRON"
     CEC = "CEC"
+
+
+class CamionEstadoOperativo(StrEnum):
+    DISPONIBLE = "Disponible"
+    EN_TRANSITO = "En tránsito"
+    NO_HABILITADO = "No habilitado"
+    INACTIVO = "Inactivo"
 
 
 class TipoCamion(SQLModel, table=True):
@@ -41,9 +49,11 @@ class Camion(SQLModel, table=True):
     id_tipo_camion: int = Field(foreign_key="tipo_camion.id")
     peso_kg: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     volumen_m3: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    activo: bool = Field(default=True)
 
     tipo_camion: TipoCamion | None = Relationship(back_populates="camiones")
     documentos: list["Documento"] = Relationship(back_populates="camion")
+    mantenciones: list["Mantencion"] = Relationship(back_populates="camion")
 
 
 class Documento(SQLModel, table=True):

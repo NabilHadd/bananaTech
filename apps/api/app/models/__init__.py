@@ -1,7 +1,13 @@
 # Este archivo es crucial para que SQLModel (y SQLAlchemy) reconozca
 # todas las tablas antes de crear la base de datos o generar migraciones.
 
-from app.models.camion import Camion, Documento, DocumentoTipo, TipoCamion
+from app.models.camion import (
+    Camion,
+    CamionEstadoOperativo,
+    Documento,
+    DocumentoTipo,
+    TipoCamion,
+)
 from app.models.cliente import CentroDistribucion, Cliente, ClienteCentro
 from app.models.conductor import (
     ClaseLicencia,
@@ -11,6 +17,7 @@ from app.models.conductor import (
     LicenciaClase,
     LicenciaClaseLink,
 )
+from app.models.mantencion import Mantencion, MantencionEstado, MantencionTipo
 from app.models.pedido import (
     Carga,
     CargaEstado,
@@ -19,10 +26,11 @@ from app.models.pedido import (
     PedidoCarga,
     PedidoEstado,
 )
-from app.models.viaje import Viaje
+from app.models.viaje import Viaje, ViajeEstado
 
 __all__ = [
     "Camion",
+    "CamionEstadoOperativo",
     "Carga",
     "CargaEstado",
     "CentroDistribucion",
@@ -36,10 +44,14 @@ __all__ = [
     "Licencia",
     "LicenciaClase",
     "LicenciaClaseLink",
+    "Mantencion",
+    "MantencionEstado",
+    "MantencionTipo",
     "MercaderiaTipo",
     "Pedido",
     "PedidoCarga",
     "PedidoEstado",
     "TipoCamion",
     "Viaje",
+    "ViajeEstado",
 ]

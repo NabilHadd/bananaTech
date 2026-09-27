@@ -1,6 +1,8 @@
+import json
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,7 +24,6 @@ def _env_files() -> tuple[Path | str, ...]:
 class Settings(BaseSettings):
     """Configuración leída de variables de entorno o de un archivo .env."""
 
-    # Un .env local en apps/api, si existe, gana sobre el de la raíz.
     model_config = SettingsConfigDict(
         env_file=_env_files(),
         extra="ignore",
@@ -30,10 +31,30 @@ class Settings(BaseSettings):
 
     app_name: str = "bananaTech API"
     debug: bool = True
-    # Origen del frontend de Vite, necesario para CORS en producción
     cors_origins: list[str] = ["http://localhost:5173"]
-    # URL de conexión a la base de datos PostgreSQL
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/erp"
+    database_url: str = (
+        "postgresql+asyncpg://bananatech:cambiame@localhost:5433/bananatech"
+    )
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, value: object) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item) for item in value]
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return []
+            try:
+                parsed = json.loads(stripped)
+                if isinstance(parsed, list):
+                    return [str(item) for item in parsed]
+            except json.JSONDecodeError:
+                pass
+            return [part.strip() for part in stripped.split(",") if part.strip()]
+        return [str(value)]
 
 
 @lru_cache
