@@ -12,7 +12,7 @@ export const DashboardStats: React.FC = () => {
     {
       label: 'Flota Total',
       value: totalCamiones.toString(),
-      subtext: '3 unidades en BD',
+      subtext: '3 unidades de demostración',
       icon: <Truck size={24} />,
       color: 'var(--accent-primary)',
       bg: 'var(--accent-glow)'

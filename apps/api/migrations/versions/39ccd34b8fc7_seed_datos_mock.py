@@ -5,19 +5,16 @@ Revises: 5d54c50ca37d
 Create Date: 2026-09-19 23:34:55.961521
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-
-import sqlmodel
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '39ccd34b8fc7'
-down_revision: Union[str, None] = '5d54c50ca37d'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '5d54c50ca37d'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -155,17 +152,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    conn = op.get_bind()
-    conn.execute(sa.text("DELETE FROM pedido_carga"))
-    conn.execute(sa.text("DELETE FROM carga"))
-    conn.execute(sa.text("DELETE FROM pedido"))
-    conn.execute(sa.text("DELETE FROM documento"))
-    conn.execute(sa.text("DELETE FROM camion"))
-    conn.execute(sa.text("DELETE FROM licencia_clase"))
-    conn.execute(sa.text("DELETE FROM licencia"))
-    conn.execute(sa.text("DELETE FROM conductor"))
-    conn.execute(sa.text("DELETE FROM cliente_centro"))
-    conn.execute(sa.text("DELETE FROM cliente"))
-    conn.execute(sa.text("DELETE FROM centro_distribucion"))
-    conn.execute(sa.text("DELETE FROM clase_licencia_tipo_camion"))
-    conn.execute(sa.text("DELETE FROM tipo_camion"))
+    raise RuntimeError(
+        "Downgrade de datos mock bloqueado para evitar eliminar registros ajenos. "
+        "Reinicia la base local si necesitas retirar estos datos de demostración."
+    )

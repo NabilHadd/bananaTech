@@ -244,7 +244,7 @@ export const PEDIDOS: Pedido[] = [
     ventanaFin: '2026-09-22 18:00',
     tipoMercaderia: 'GENERAL',
     estado: 'EN_ESPERA',
-    destino: 'Antofagasta (La Negra)'
+    destino: 'Coquimbo (Base Principal)'
   },
   {
     id: 3,

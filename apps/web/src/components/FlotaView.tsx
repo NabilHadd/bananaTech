@@ -29,7 +29,7 @@ export const FlotaView: React.FC = () => {
             <Truck color="var(--accent-primary)" /> Gestión de Flota
           </h1>
           <p className="text-muted">
-            Monitoreo técnico, capacidades y habilitación legal de camiones (3 unidades registradas en BD)
+            Monitoreo técnico, capacidades y habilitación legal de camiones (datos de demostración)
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>

@@ -23,6 +23,8 @@ target-version = "py314"
 extend-select = ["I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
-# Las comillas en Annotated[...] son obligatorias: strawberry.lazy resuelve el
-# tipo en tiempo de ejecución y la clase referenciada no está importada ahí.
+# Estas referencias adelantadas son intencionales: SQLModel las usa para
+# resolver relaciones y GraphQL las necesita en tipos definidos dentro de clases.
 "app/*/types.py" = ["UP037"]
+"app/models/*.py" = ["UP037"]
+"app/graphql/schema.py" = ["UP037"]

@@ -11,8 +11,8 @@ class CargaPropuesta:
 
     camion: Camion
     pedidos: list[Pedido] = field(default_factory=list)
-    peso_total_kg: Decimal = Decimal("0")
-    volumen_total_m3: Decimal = Decimal("0")
+    peso_total_kg: Decimal = Decimal(0)
+    volumen_total_m3: Decimal = Decimal(0)
 
     @property
     def peso_disponible_kg(self) -> Decimal:
@@ -24,11 +24,11 @@ class CargaPropuesta:
 
     @property
     def porcentaje_peso(self) -> Decimal:
-        return self.peso_total_kg / self.camion.peso_kg * Decimal("100")
+        return self.peso_total_kg / self.camion.peso_kg * Decimal(100)
 
     @property
     def porcentaje_volumen(self) -> Decimal:
-        return self.volumen_total_m3 / self.camion.volumen_m3 * Decimal("100")
+        return self.volumen_total_m3 / self.camion.volumen_m3 * Decimal(100)
 
 
 @dataclass
@@ -116,5 +116,49 @@ def distribuir_pedidos_en_camiones(
 
     return DistribucionCargas(
         cargas=[carga for carga in cargas if carga.pedidos],
+        no_asignados=no_asignados,
+    )
+
+
+def calcular_carga_para_camion(
+    pedidos: list[Pedido],
+    camion: Camion,
+) -> DistribucionCargas:
+    """Propone una carga para un camión respetando urgencia y capacidad.
+
+    Se priorizan las ventanas que comienzan antes. Para pedidos con la misma
+    ventana, se consideran primero los que aprovechan más la capacidad combinada
+    de peso y volumen. Es una heurística voraz, no un optimizador exacto.
+    """
+    carga = CargaPropuesta(camion=camion)
+    no_asignados: list[PedidoNoAsignado] = []
+    pendientes = sorted(
+        (pedido for pedido in pedidos if pedido.estado == PedidoEstado.EN_ESPERA),
+        key=lambda pedido: (
+            pedido.ventana_inicio,
+            pedido.ventana_fin,
+            -(pedido.peso_kg / camion.peso_kg + pedido.volumen_m3 / camion.volumen_m3),
+            pedido.id or 0,
+        ),
+    )
+
+    for pedido in pendientes:
+        if _cabe_en_carga(carga, pedido) and _carga_compatible(carga, pedido):
+            carga.pedidos.append(pedido)
+            carga.peso_total_kg += pedido.peso_kg
+            carga.volumen_total_m3 += pedido.volumen_m3
+            continue
+
+        carga_vacia = CargaPropuesta(camion=camion)
+        if not _cabe_en_carga(carga_vacia, pedido):
+            motivo = "El pedido excede la capacidad máxima del camión"
+        elif not _carga_compatible(carga, pedido):
+            motivo = "El tipo de mercadería no es compatible con esta carga"
+        else:
+            motivo = "El pedido excede la capacidad disponible de la carga"
+        no_asignados.append(PedidoNoAsignado(pedido=pedido, motivo=motivo))
+
+    return DistribucionCargas(
+        cargas=[carga] if carga.pedidos else [],
         no_asignados=no_asignados,
     )

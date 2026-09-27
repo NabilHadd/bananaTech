@@ -181,9 +181,52 @@ docker-compose.yml
 
 ---
 
+## GraphQL: clientes, pedidos y cargas
+
+El backend permite consultar y administrar clientes y pedidos desde
+`http://localhost:8000/graphql`. Las consultas disponibles incluyen `clientes`,
+`cliente(id)`, `pedidos(idCliente, estado)`, `pedido(id)` y `cargas(estado)`.
+Los campos de entrada usan `idCliente`, `pesoKg`, `ventanaInicio`,
+`tipoMercaderia`, según la conversión automática de Strawberry a camelCase.
+
+Crear un pedido:
+
+```graphql
+mutation {
+  crearPedido(input: {
+    idCliente: 1
+    pesoKg: 8000
+    volumenM3: 20
+    ventanaInicio: "2026-10-01T08:00:00"
+    ventanaFin: "2026-10-01T18:00:00"
+    tipoMercaderia: REFRIGERADA
+  }) {
+    id
+    estado
+    idCliente
+  }
+}
+```
+
+Los pedidos nuevos comienzan en `EN_ESPERA`. Solo pueden editarse o cancelarse
+mientras esperan. `crearCarga(idCentro, idCamion, idsPedidos)` confirma una
+propuesta solo si los pedidos corresponden al centro y caben en el camión
+seleccionado; el camión queda registrado en la carga.
+Luego `cambiarEstadoCarga` permite avanzar por `CREADO → EN_RUTA → ENTREGADA`
+(también permite cancelar una carga antes de finalizarla). Al iniciar el viaje,
+los pedidos pasan a `TRANSITO`; al completar la carga, pasan a `ENTREGADO`. Si
+se cancela una carga en ruta, sus pedidos vuelven a `EN_ESPERA`.
+
+Antes de crear una carga, `calcularCargaValida(camionId, centroId)` devuelve una
+propuesta no persistida para el camión y centro elegidos. Considera pedidos en
+espera de clientes asociados activamente al centro, excluye pedidos ligados a
+cargas no canceladas,
+prioriza las ventanas cercanas y respeta capacidad y compatibilidad. La respuesta
+incluye la ocupación de peso/volumen y los pedidos no asignados con su motivo.
+La selección es una heurística voraz, no una optimización exacta; el planificador
+confirma la selección con `crearCarga`.
+
 ## Pendientes
 
-1. Conectar la sesión de BD al contexto de GraphQL (`app/core/context.py`).
-2. Reemplazar el schema de ejemplo por queries y mutations reales.
-3. Definir los tipos de camión y sembrarlos en `tipo_camion`.
-4. Conectar el frontend a la API (hoy usa mocks).
+1. Conectar el frontend a la API (actualmente usa datos mock).
+2. Añadir pruebas de integración con PostgreSQL para las operaciones GraphQL.

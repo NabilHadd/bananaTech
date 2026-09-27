@@ -1,42 +1,44 @@
 from decimal import Decimal
-from typing import Optional, List
 
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, Relationship, SQLModel
 
 
 class ClienteCentro(SQLModel, table=True):
     __tablename__ = "cliente_centro"
-    
+
     id_cliente: int = Field(foreign_key="cliente.id", primary_key=True)
     id_centro: int = Field(foreign_key="centro_distribucion.id", primary_key=True)
-    estado: bool = Field(default=True, description="Indica la vigencia o no de un centro asociado a un cliente.")
+    estado: bool = Field(
+        default=True,
+        description="Indica la vigencia o no de un centro asociado a un cliente.",
+    )
 
 
 class Cliente(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     razon: str = Field(description="Nombre de la empresa")
     rut: str = Field(unique=True)
-    direccion: Optional[str] = Field(default=None, description="Dirección de la empresa (solo informativo)")
-    mail: Optional[str] = Field(default=None, unique=True)
-    telefono: Optional[str] = Field(default=None, unique=True)
-    
+    direccion: str | None = Field(
+        default=None, description="Dirección de la empresa (solo informativo)"
+    )
+    mail: str | None = Field(default=None, unique=True)
+    telefono: str | None = Field(default=None, unique=True)
+
     # Relación con CentroDistribucion a través de ClienteCentro
-    centros: List["CentroDistribucion"] = Relationship(
-        back_populates="clientes",
-        link_model=ClienteCentro
+    centros: list["CentroDistribucion"] = Relationship(
+        back_populates="clientes", link_model=ClienteCentro
     )
 
 
 class CentroDistribucion(SQLModel, table=True):
     __tablename__ = "centro_distribucion"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
+
+    id: int | None = Field(default=None, primary_key=True)
     direccion: str = Field(unique=True)
     distancia_km: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
     distancia_min: int = Field(ge=0)
-    
+
     # Relación con Cliente a través de ClienteCentro
-    clientes: List[Cliente] = Relationship(
-        back_populates="centros",
-        link_model=ClienteCentro
+    clientes: list[Cliente] = Relationship(
+        back_populates="centros", link_model=ClienteCentro
     )
