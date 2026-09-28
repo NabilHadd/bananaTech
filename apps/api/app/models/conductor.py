@@ -54,6 +54,7 @@ class Conductor(SQLModel, table=True):
     apellidos: str
     telefono: str
     email: str
+    activo: bool = Field(default=True, description="Indicador de baja lógica (RNF-06)")
 
     licencias: List["Licencia"] = Relationship(back_populates="conductor")
 

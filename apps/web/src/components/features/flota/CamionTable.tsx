@@ -1,10 +1,10 @@
 import React from 'react';
-import { Eye, Truck } from 'lucide-react';
+import { Check, Eye, Truck } from 'lucide-react';
 import { DataTable } from '../../common/DataTable';
 import type { Column } from '../../common/DataTable';
 import { Button } from '../../ui/Button';
 import { EstadoCamionBadge } from './FlotaBadges';
-import { DOCUMENTO_LABEL } from './flota.constants';
+import { DOCUMENTOS_OBLIGATORIOS } from './flota.constants';
 import type { Camion } from './types';
 
 interface CamionTableProps {
@@ -15,6 +15,11 @@ interface CamionTableProps {
 
 const muted = { fontSize: '0.75rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' } as const;
 const strong = { fontWeight: 600, color: 'var(--text-primary)' } as const;
+
+/** Todos sus documentos vigentes y ninguno obligatorio faltante. El detalle está en la ficha. */
+const documentosAlDia = (c: Camion) =>
+  c.documentos.every((d) => d.vigente) &&
+  DOCUMENTOS_OBLIGATORIOS.every((tipo) => c.documentos.some((d) => d.tipo === tipo));
 
 export const CamionTable: React.FC<CamionTableProps> = ({ camiones, onSelect, empty }) => {
   const columns: Column<Camion>[] = [
@@ -68,19 +73,18 @@ export const CamionTable: React.FC<CamionTableProps> = ({ camiones, onSelect, em
     {
       key: 'documentos',
       header: 'Documentos',
-      render: (c) => (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-          {c.documentos.map((doc) => (
-            <span
-              key={doc.id}
-              className={`doc-chip${doc.vigente ? '' : ' vencido'}`}
-              title={`${DOCUMENTO_LABEL[doc.tipo]} — vence ${doc.fechaVencimiento}`}
-            >
-              {doc.tipo} {doc.vigente ? '✓' : '⚠ Vencido'}
-            </span>
-          ))}
-        </div>
-      ),
+      render: (c) => {
+        const alDia = documentosAlDia(c);
+        return (
+          <span
+            className={`doc-status${alDia ? '' : ' alerta'}`}
+            title={alDia ? 'Documentación al día' : 'Documentos vencidos o faltantes: ver detalle en la ficha'}
+            aria-label={alDia ? 'Documentación al día' : 'Documentos vencidos o faltantes'}
+          >
+            {alDia ? <Check size={14} strokeWidth={3} /> : '!'}
+          </span>
+        );
+      },
     },
     {
       key: 'estado',

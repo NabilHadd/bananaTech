@@ -1,17 +1,17 @@
 import React from 'react';
-import { MapPin, Navigation, User } from 'lucide-react';
+import { MapPin, Navigation, Truck } from 'lucide-react';
 import { DataTable } from '../../common/DataTable';
 import type { Column } from '../../common/DataTable';
 import { EmptyState } from '../../common/EmptyState';
-import { ViajeEstadoBadge } from './FlotaBadges';
-import type { ViajeCamion } from './types';
+import { ViajeEstadoBadge } from '../flota/FlotaBadges';
+import type { ViajeConductor } from './types';
 
 const muted = { fontSize: '0.7rem', color: 'var(--text-tertiary)' } as const;
 
 /** La API entrega ISO (`2026-09-10T07:30:00`); se muestra como `2026-09-10 07:30`. */
 const formatearFecha = (iso: string) => iso.slice(0, 16).replace('T', ' ');
 
-const columns: Column<ViajeCamion>[] = [
+const columns: Column<ViajeConductor>[] = [
   {
     key: 'fecha',
     header: 'Salida',
@@ -37,33 +37,24 @@ const columns: Column<ViajeCamion>[] = [
   },
   { key: 'distancia', header: 'Distancia', render: (v) => <strong>{v.distanciaKm} km</strong> },
   {
-    key: 'conductor',
-    header: 'Conductor',
+    key: 'camion',
+    header: 'Camión',
     render: (v) => (
-      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-        <User size={13} color="var(--text-tertiary)" />
-        {v.conductor}
+      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', letterSpacing: '0.04em' }}>
+        <Truck size={13} color="var(--text-tertiary)" />
+        {v.patente}
       </span>
     ),
   },
-  {
-    key: 'carga',
-    header: 'Carga',
-    render: (v) => (
-      <>
-        <div style={{ fontWeight: 600 }}>{v.pesoKg.toLocaleString('es-CL')} kg</div>
-        <div style={muted}>Ocupación: {v.ocupacionPct}%</div>
-      </>
-    ),
-  },
+  { key: 'carga', header: 'Carga', render: (v) => <strong>{v.pesoKg.toLocaleString('es-CL')} kg</strong> },
   { key: 'estado', header: 'Estado', render: (v) => <ViajeEstadoBadge estado={v.estado} /> },
 ];
 
-export const ViajesTable: React.FC<{ viajes: ViajeCamion[] }> = ({ viajes }) =>
+export const ViajesConductorTable: React.FC<{ viajes: ViajeConductor[] }> = ({ viajes }) =>
   viajes.length === 0 ? (
     <EmptyState
       icon={<Navigation size={32} />}
-      title="Este camión aún no registra viajes"
+      title="Este conductor aún no registra viajes"
       description="Cuando se le asigne un viaje aparecerá en este historial."
     />
   ) : (

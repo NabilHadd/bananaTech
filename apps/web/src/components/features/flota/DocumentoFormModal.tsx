@@ -44,10 +44,6 @@ export const DocumentoFormModal: React.FC<DocumentoFormModalProps> = ({
       onClose={onClose}
       maxWidth="520px"
     >
-      <div className="callout callout-info" style={{ marginBottom: '1.25rem' }}>
-        Todo camión debe tener su <strong>Revisión Técnica (RT)</strong>, <strong>Permiso de Circulación (PC)</strong> y{' '}
-        <strong>SOAP</strong> vigentes. Si alguno está vencido, el camión queda excluido de las asignaciones a viajes.
-      </div>
 
       <form onSubmit={handleSubmit} className="form-grid">
         <div className="form-span-2">

@@ -4,6 +4,12 @@ from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 from strawberry.fastapi import BaseContext
 
+from app.conductores.repository import (
+    ClaseLicenciaRepository,
+    ConductorRepository,
+    ViajeConductorRepository,
+)
+from app.conductores.service import ConductoresService
 from app.core.db import get_session
 from app.flota.repository import CamionRepository, TipoCamionRepository, ViajeRepository
 from app.flota.service import FlotaService
@@ -26,6 +32,12 @@ class Context(BaseContext):
             CamionRepository(session),
             TipoCamionRepository(session),
             ViajeRepository(session),
+        )
+        self.conductores = ConductoresService(
+            session,
+            ConductorRepository(session),
+            ClaseLicenciaRepository(session),
+            ViajeConductorRepository(session),
         )
 
 

@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Zona de la operación. Las fechas de la base no guardan zona y el
     # contenedor corre en UTC: "hoy" (vigencia de documentos) se calcula aquí.
     zona_horaria: str = "America/Santiago"
+    # Horas que un conductor debe descansar tras terminar un viaje (RN-06,
+    # HU2.1). Cuando exista el panel de parámetros (HU7.2) se leerá de la base.
+    descanso_minimo_horas: int = 8
 
 
 @lru_cache

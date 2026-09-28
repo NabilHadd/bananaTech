@@ -2,14 +2,15 @@ import strawberry
 from strawberry.extensions import MaskErrors
 from strawberry.tools import merge_types
 
+from app.conductores.schema import ConductoresMutation, ConductoresQuery
 from app.core.config import get_settings
 from app.core.errors import DomainError
 from app.flota.schema import FlotaMutation, FlotaQuery
 from app.graphql.extensions import SesionSerializada
 
 # Cada épica aporta su Query y su Mutation; aquí se unen en un solo schema.
-Query = merge_types("Query", (FlotaQuery,))
-Mutation = merge_types("Mutation", (FlotaMutation,))
+Query = merge_types("Query", (FlotaQuery, ConductoresQuery))
+Mutation = merge_types("Mutation", (FlotaMutation, ConductoresMutation))
 
 
 def _es_error_interno(error) -> bool:

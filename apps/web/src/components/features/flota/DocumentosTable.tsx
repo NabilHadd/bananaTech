@@ -8,7 +8,8 @@ import type { DocumentoCamion } from './types';
 
 interface DocumentosTableProps {
   documentos: DocumentoCamion[];
-  onRenovar: (documento: DocumentoCamion) => void;
+  /** Si se omite (camión dado de baja), la tabla es de sólo lectura. */
+  onRenovar?: (documento: DocumentoCamion) => void;
 }
 
 export const DocumentosTable: React.FC<DocumentosTableProps> = ({ documentos, onRenovar }) => {
@@ -26,7 +27,9 @@ export const DocumentosTable: React.FC<DocumentosTableProps> = ({ documentos, on
       ),
     },
     { key: 'estado', header: 'Estado', render: (d) => <VigenciaBadge vigente={d.vigente} /> },
-    {
+  ];
+  if (onRenovar) {
+    columns.push({
       key: 'accion',
       header: 'Acción',
       render: (d) => (
@@ -34,8 +37,8 @@ export const DocumentosTable: React.FC<DocumentosTableProps> = ({ documentos, on
           {d.vigente ? 'Actualizar' : 'Renovar'}
         </Button>
       ),
-    },
-  ];
+    });
+  }
 
   return <DataTable columns={columns} rows={documentos} rowKey={(d) => d.id} bordered />;
 };

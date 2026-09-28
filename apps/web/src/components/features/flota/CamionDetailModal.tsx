@@ -66,6 +66,7 @@ export const CamionDetailModal: React.FC<CamionDetailModalProps> = ({
   onDarDeBaja,
 }) => {
   const [tab, setTab] = useState<FichaTab>('atributos');
+  const inactivo = camion.estado === 'INACTIVO';
 
   const tabs: TabItem<FichaTab>[] = [
     { id: 'atributos', label: 'Atributos técnicos', icon: <Truck size={15} /> },
@@ -119,9 +120,12 @@ export const CamionDetailModal: React.FC<CamionDetailModalProps> = ({
       footer={
         <>
           <div style={{ display: 'flex', gap: '0.75rem', marginRight: 'auto' }}>
-            <Button icon={<Edit2 size={14} />} onClick={onEditar}>Editar</Button>
-            {camion.estado !== 'INACTIVO' && (
-              <Button variant="danger" icon={<Trash2 size={14} />} onClick={onDarDeBaja}>Dar de baja</Button>
+            {/* Un camión dado de baja queda sólo como registro: no se edita. */}
+            {!inactivo && (
+              <>
+                <Button icon={<Edit2 size={14} />} onClick={onEditar}>Editar</Button>
+                <Button variant="danger" icon={<Trash2 size={14} />} onClick={onDarDeBaja}>Dar de baja</Button>
+              </>
             )}
           </div>
           <Button variant="primary" onClick={onClose}>Cerrar ficha</Button>
@@ -173,12 +177,14 @@ export const CamionDetailModal: React.FC<CamionDetailModalProps> = ({
                 )}
               </div>
             </div>
-            <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => onDocumento()}>
-              Registrar documento
-            </Button>
+            {!inactivo && (
+              <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => onDocumento()}>
+                Registrar documento
+              </Button>
+            )}
           </div>
 
-          <DocumentosTable documentos={camion.documentos} onRenovar={onDocumento} />
+          <DocumentosTable documentos={camion.documentos} onRenovar={inactivo ? undefined : onDocumento} />
         </div>
       )}
 

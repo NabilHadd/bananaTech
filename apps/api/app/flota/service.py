@@ -5,15 +5,14 @@ hace commit, así que cada método público es una operación completa.
 """
 
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
-from zoneinfo import ZoneInfo
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.config import get_settings
+from app.core import tiempo
 from app.core.errors import DomainError
 from app.flota.repository import CamionRepository, TipoCamionRepository, ViajeRepository
 from app.models import Camion, CargaEstado, Documento, DocumentoTipo, TipoCamion, Viaje
@@ -46,6 +45,19 @@ class EstadoViaje(StrEnum):
     EN_RUTA = "EN_RUTA"
     FINALIZADO = "FINALIZADO"
     CANCELADO = "CANCELADO"
+
+
+def estado_viaje(viaje: Viaje, ahora: datetime) -> EstadoViaje:
+    """Estado de un viaje según su carga y sus fechas; no se guarda.
+
+    Lo usan el historial del camión y el de los conductores (E02). Requiere la
+    carga del viaje ya cargada.
+    """
+    if viaje.carga.estado == CargaEstado.CANCELADA:
+        return EstadoViaje.CANCELADO
+    if viaje.fecha_fin > ahora:
+        return EstadoViaje.EN_RUTA
+    return EstadoViaje.FINALIZADO
 
 
 # ── Datos de entrada ─────────────────────────────────────────────────────────
@@ -140,7 +152,7 @@ class FlotaService:
             id_tipo_camion=id_tipo_camion,
             capacidad_min_kg=capacidad_min_kg,
         )
-        hoy = _hoy()
+        hoy = tiempo.hoy()
         evaluados = [self.evaluar(c, hoy) for c in camiones]
         # El estado depende de la fecha de hoy, así que se filtra después de evaluar.
         if estado is not None:
@@ -149,24 +161,18 @@ class FlotaService:
 
     async def obtener_camion(self, id: int) -> CamionEvaluado | None:
         camion = await self.camiones.obtener(id)
-        return self.evaluar(camion, _hoy()) if camion else None
+        return self.evaluar(camion, tiempo.hoy()) if camion else None
 
     async def historial(self, id_camion: int) -> HistorialCamion:
         camion = await self._camion_existente(id_camion)
         viajes = await self.viajes.listar_por_camion(id_camion)
         centros = await self.viajes.centros_por_id({v.carga.id_centro for v in viajes})
-        ahora = _ahora()
+        ahora = tiempo.ahora()
 
         filas: list[ViajeDelCamion] = []
         for v in viajes:
             centro = centros[v.carga.id_centro]
             peso = sum((p.peso_kg for p in v.carga.pedidos), Decimal(0))
-            if v.carga.estado == CargaEstado.CANCELADA:
-                estado = EstadoViaje.CANCELADO
-            elif v.fecha_fin > ahora:
-                estado = EstadoViaje.EN_RUTA
-            else:
-                estado = EstadoViaje.FINALIZADO
             filas.append(
                 ViajeDelCamion(
                     viaje=v,
@@ -176,7 +182,7 @@ class FlotaService:
                     conductor=f"{v.conductor.nombres} {v.conductor.apellidos}",
                     peso_kg=peso,
                     ocupacion_pct=round(float(peso / camion.peso_kg * 100), 1),
-                    estado=estado,
+                    estado=estado_viaje(v, ahora),
                 )
             )
 
@@ -205,8 +211,8 @@ class FlotaService:
         camion.documentos = [
             Documento(
                 tipo=d.tipo,
-                fecha_emision=_a_datetime(d.fecha_emision),
-                fecha_vencimiento=_a_datetime(d.fecha_vencimiento),
+                fecha_emision=tiempo.a_datetime(d.fecha_emision),
+                fecha_vencimiento=tiempo.a_datetime(d.fecha_vencimiento),
             )
             for d in documentos
         ]
@@ -217,6 +223,11 @@ class FlotaService:
     async def editar(self, id: int, datos: DatosCamion) -> CamionEvaluado:
         """Actualiza los datos técnicos. Los documentos se gestionan aparte."""
         camion = await self._camion_existente(id)
+        # Un camión dado de baja queda sólo como registro histórico.
+        if not camion.activo:
+            raise DomainError(
+                f"El camión {camion.patente} está dado de baja y no se puede editar"
+            )
         patente = self._normalizar_patente(datos.patente)
         await self._validar_datos(datos)
         if await self.camiones.existe_patente(patente, excepto_id=id):
@@ -247,14 +258,14 @@ class FlotaService:
 
         existente = next((d for d in camion.documentos if d.tipo == datos.tipo), None)
         if existente:
-            existente.fecha_emision = _a_datetime(datos.fecha_emision)
-            existente.fecha_vencimiento = _a_datetime(datos.fecha_vencimiento)
+            existente.fecha_emision = tiempo.a_datetime(datos.fecha_emision)
+            existente.fecha_vencimiento = tiempo.a_datetime(datos.fecha_vencimiento)
         else:
             camion.documentos.append(
                 Documento(
                     tipo=datos.tipo,
-                    fecha_emision=_a_datetime(datos.fecha_emision),
-                    fecha_vencimiento=_a_datetime(datos.fecha_vencimiento),
+                    fecha_emision=tiempo.a_datetime(datos.fecha_emision),
+                    fecha_vencimiento=tiempo.a_datetime(datos.fecha_vencimiento),
                 )
             )
         await self.session.commit()
@@ -301,7 +312,7 @@ class FlotaService:
         return camion
 
     async def _evaluado(self, id: int) -> CamionEvaluado:
-        return self.evaluar(await self._camion_existente(id), _hoy())
+        return self.evaluar(await self._camion_existente(id), tiempo.hoy())
 
     async def _commit(self, patente: str) -> None:
         # La consulta previa no cubre dos registros simultáneos con la misma
@@ -324,7 +335,7 @@ class FlotaService:
         # así que las reglas se comprueban aquí.
         if not datos.marca.strip() or not datos.modelo.strip():
             raise DomainError("La marca y el modelo son obligatorios")
-        anio_max = _hoy().year + 1
+        anio_max = tiempo.hoy().year + 1
         if not ANIO_MINIMO <= datos.anio <= anio_max:
             raise DomainError(f"El año debe estar entre {ANIO_MINIMO} y {anio_max}")
         if datos.peso_max_kg <= 0 or datos.volumen_max_m3 <= 0:
@@ -356,7 +367,7 @@ class FlotaService:
         if faltantes:
             raise DomainError(f"Faltan documentos obligatorios: {', '.join(faltantes)}")
 
-        hoy = _hoy()
+        hoy = tiempo.hoy()
         for d in documentos:
             self._validar_fechas(d)
             # Un camión recién registrado debe quedar DISPONIBLE (HU1.1).
@@ -375,17 +386,3 @@ class FlotaService:
         camion.volumen_m3 = datos.volumen_max_m3
         camion.rendimiento_base_km_l = datos.rendimiento_base_km_l
         camion.kilometraje_actual = datos.kilometraje_actual
-
-
-def _ahora() -> datetime:
-    """Hora local de la operación, sin zona, comparable con los timestamp de la base."""
-    return datetime.now(ZoneInfo(get_settings().zona_horaria)).replace(tzinfo=None)
-
-
-def _hoy() -> date:
-    return _ahora().date()
-
-
-def _a_datetime(dia: date) -> datetime:
-    # Las columnas de documento son timestamp; la vigencia se evalúa por día.
-    return datetime.combine(dia, time())
