@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
     # URL de conexión a la base de datos PostgreSQL
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/erp"
+    # Zona de la operación. Las fechas de la base no guardan zona y el
+    # contenedor corre en UTC: "hoy" (vigencia de documentos) se calcula aquí.
+    zona_horaria: str = "America/Santiago"
 
 
 @lru_cache
