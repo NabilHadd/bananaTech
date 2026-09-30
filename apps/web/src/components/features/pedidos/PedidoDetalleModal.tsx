@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, MapPin, Calendar, Clock, AlertCircle } from 'lucide-react';
+import { Package, MapPin, Calendar, Clock, AlertCircle, Boxes } from 'lucide-react';
 import { Modal } from '../../common/Modal';
 import { Button } from '../../ui/Button';
 import { EstadoPedidoBadge, MercaderiaBadge } from './PedidoBadges';
@@ -8,9 +8,7 @@ import type { Pedido } from './types';
 interface PedidoDetalleModalProps {
   pedido: Pedido;
   onClose: () => void;
-  onMarcarTransito: (id: number) => Promise<void>;
   onCancelar: (id: number) => Promise<void>;
-  onAbrirEntrega: () => void;
 }
 
 function formatearFecha(iso: string): string {
@@ -29,24 +27,10 @@ function formatearFecha(iso: string): string {
 export const PedidoDetalleModal: React.FC<PedidoDetalleModalProps> = ({
   pedido,
   onClose,
-  onMarcarTransito,
   onCancelar,
-  onAbrirEntrega,
 }) => {
   const [procesando, setProcesando] = useState(false);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
-
-  const handleTransito = async () => {
-    setErrorLocal(null);
-    setProcesando(true);
-    try {
-      await onMarcarTransito(pedido.id);
-      onClose();
-    } catch (e) {
-      setErrorLocal(e instanceof Error ? e.message : 'Error al cambiar estado');
-      setProcesando(false);
-    }
-  };
 
   const handleCancelar = async () => {
     if (!window.confirm('¿Está seguro de que desea cancelar este pedido?')) return;
@@ -123,46 +107,29 @@ export const PedidoDetalleModal: React.FC<PedidoDetalleModalProps> = ({
             </div>
           </div>
 
-          {pedido.estado === 'ENTREGADO' && (
-            <>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Entregado el</div>
-                <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Calendar size={13} /> {formatearFecha(pedido.fechaEntrega || '')}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Receptor</div>
-                <div style={{ fontWeight: 500 }}>{pedido.receptor}</div>
-              </div>
-              {pedido.observaciones && (
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Observaciones</div>
-                  <div style={{ fontSize: '0.875rem', marginTop: '0.25rem', padding: '0.5rem', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-sm)' }}>
-                    {pedido.observaciones}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Carga</div>
+            <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Boxes size={14} color="var(--accent-primary)" />
+              {pedido.idCargaActiva !== null
+                ? `En la carga #CAR-${String(pedido.idCargaActiva).padStart(4, '0')}`
+                : 'Sin carga asignada'}
+            </div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+              El pedido pasa a En tránsito y a Entregado con el viaje de su carga.
+            </div>
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-          {pedido.estado !== 'ENTREGADO' && pedido.estado !== 'CANCELADO' && (
-            <Button variant="danger" onClick={handleCancelar} disabled={procesando}>
+          {pedido.estado === 'CREADA' && (
+            <Button
+              variant="danger"
+              onClick={handleCancelar}
+              disabled={procesando || pedido.idCargaActiva !== null}
+              title={pedido.idCargaActiva !== null ? 'Quite el pedido de su carga antes de cancelarlo' : undefined}
+            >
               Cancelar Pedido
-            </Button>
-          )}
-
-          {pedido.estado === 'EN_ESPERA' && (
-            <Button variant="primary" onClick={handleTransito} disabled={procesando}>
-              Pasar a Tránsito
-            </Button>
-          )}
-
-          {pedido.estado === 'TRANSITO' && (
-            <Button variant="primary" onClick={onAbrirEntrega} disabled={procesando}>
-              Registrar Entrega
             </Button>
           )}
         </div>

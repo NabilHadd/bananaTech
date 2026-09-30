@@ -16,16 +16,23 @@ class MercaderiaTipo(str, Enum):
 
 
 class PedidoEstado(str, Enum):
-    EN_ESPERA = "En espera"
+    CREADA = "Creada"
     TRANSITO = "Transito"
     ENTREGADO = "Entregado"
     CANCELADO = "Cancelado"
 
 
 class CargaEstado(str, Enum):
-    CREADO = "Creado"
+    CREADA = "Creada"
+    CONFIRMADA = "Confirmada"
     EN_RUTA = "En ruta"
+    FINALIZADA = "Finalizada"
     CANCELADA = "Cancelada"
+
+
+# Una carga activa retiene a sus pedidos: no pueden entrar a otra carga ni
+# cancelarse. Las canceladas quedan en el historial y liberan sus pedidos.
+CARGA_ACTIVA = (CargaEstado.CREADA, CargaEstado.CONFIRMADA, CargaEstado.EN_RUTA)
 
 
 class PedidoCarga(SQLModel, table=True):
@@ -44,12 +51,10 @@ class Pedido(SQLModel, table=True):
     ventana_inicio: datetime
     ventana_fin: datetime
     tipo_mercaderia: MercaderiaTipo
-    estado: PedidoEstado = Field(default=PedidoEstado.EN_ESPERA)
-
-    # Datos de entrega (HU3.3)
-    fecha_entrega: Optional[datetime] = Field(default=None)
-    receptor: Optional[str] = Field(default=None)
-    observaciones: Optional[str] = Field(default=None)
+    # Sólo lo cambian los services de carga y viaje: Tránsito y Entregado son
+    # consecuencia de que su carga salga y llegue. La entrega (hora, receptor,
+    # observación) se registra en el viaje.
+    estado: PedidoEstado = Field(default=PedidoEstado.CREADA)
 
     # Relaciones para navegación
     cliente: Optional[Cliente] = Relationship()
@@ -61,12 +66,17 @@ class Pedido(SQLModel, table=True):
         link_model=PedidoCarga,
     )
 
+    def carga_activa(self) -> Optional["Carga"]:
+        """La carga que retiene al pedido, si hay una. Requiere `cargas` cargado."""
+        return next((c for c in self.cargas if c.estado in CARGA_ACTIVA), None)
+
 
 class Carga(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     id_centro: int = Field(foreign_key="centro_distribucion.id")
     estado: CargaEstado
 
+    centro: Optional[CentroDistribucion] = Relationship()
     # Relación con Pedido a través de PedidoCarga
     pedidos: list[Pedido] = Relationship(
         back_populates="cargas",

@@ -92,7 +92,7 @@ class PedidosService:
             ventana_inicio=datos.ventana_inicio,
             ventana_fin=datos.ventana_fin,
             tipo_mercaderia=datos.tipo_mercaderia,
-            estado=PedidoEstado.EN_ESPERA,
+            estado=PedidoEstado.CREADA,
         )
 
         self.pedidos.agregar(pedido)
@@ -103,59 +103,25 @@ class PedidosService:
         resultado = await self.pedidos.obtener(pedido.id)
         return resultado if resultado is not None else pedido
 
-    async def avanzar_a_transito(self, id: int) -> Pedido:
-        pedido = await self.obtener_pedido(id)
-        if not pedido:
-            raise DomainError(f"El pedido con ID {id} no existe.")
-            
-        if pedido.estado != PedidoEstado.EN_ESPERA:
-            raise DomainError(f"El pedido debe estar en estado '{PedidoEstado.EN_ESPERA.value}' para pasar a '{PedidoEstado.TRANSITO.value}'.")
-            
-        pedido.estado = PedidoEstado.TRANSITO
-        await self.session.commit()
-        await self.session.refresh(pedido)
-        
-        resultado = await self.obtener_pedido(id)
-        return resultado if resultado is not None else pedido
-
-    async def entregar_pedido(self, id: int, fecha_entrega: datetime, receptor: str, observaciones: str | None = None) -> Pedido:
-        pedido = await self.obtener_pedido(id)
-        if not pedido:
-            raise DomainError(f"El pedido con ID {id} no existe.")
-            
-        # HU3.3: "Dado un pedido en estado Creado, cuando intento pasarlo directamente a Entregado, 
-        # entonces el sistema rechaza la transición e indica las transiciones válidas."
-        if pedido.estado != PedidoEstado.TRANSITO:
-            raise DomainError(
-                f"Transición inválida: No se puede pasar de '{pedido.estado.value}' a '{PedidoEstado.ENTREGADO.value}'. "
-                f"Las transiciones válidas hacia Entregado son únicamente desde '{PedidoEstado.TRANSITO.value}'."
-            )
-            
-        if not receptor or not receptor.strip():
-            raise DomainError("El receptor es obligatorio para entregar el pedido.")
-            
-        pedido.estado = PedidoEstado.ENTREGADO
-        pedido.fecha_entrega = fecha_entrega
-        pedido.receptor = receptor
-        pedido.observaciones = observaciones
-        
-        await self.session.commit()
-        await self.session.refresh(pedido)
-        
-        resultado = await self.obtener_pedido(id)
-        return resultado if resultado is not None else pedido
-
     async def cancelar_pedido(self, id: int) -> Pedido:
         pedido = await self.obtener_pedido(id)
         if not pedido:
             raise DomainError(f"El pedido con ID {id} no existe.")
             
-        # HU3.3: "Dado un pedido no entregado, cuando lo cancelo, entonces pasa a Cancelado"
-        if pedido.estado == PedidoEstado.ENTREGADO:
-            raise DomainError("No se puede cancelar un pedido que ya fue entregado.")
-            
+        # HU3.3: "Dado un pedido no entregado, cuando lo cancelo, entonces pasa a
+        # Cancelado". Uno en tránsito va en un camión: se cancela su viaje (E05).
         if pedido.estado == PedidoEstado.CANCELADO:
             raise DomainError("El pedido ya se encuentra cancelado.")
+        if pedido.estado != PedidoEstado.CREADA:
+            raise DomainError(
+                f"Sólo se puede cancelar un pedido en estado '{PedidoEstado.CREADA.value}'; "
+                f"este está '{pedido.estado.value}'."
+            )
+        carga = pedido.carga_activa()
+        if carga is not None:
+            raise DomainError(
+                f"El pedido está en la carga #{carga.id}; quítelo de la carga antes de cancelarlo."
+            )
             
         pedido.estado = PedidoEstado.CANCELADO
         await self.session.commit()

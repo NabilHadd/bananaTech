@@ -43,10 +43,3 @@ class PedidoFiltros:
     id_cliente: int | None = None
     fecha: date | None = None
 
-
-@strawberry.input(description="Datos para marcar un pedido como entregado (HU3.3).")
-class EntregaPedidoInput:
-    id_pedido: int
-    fecha_entrega: datetime
-    receptor: str
-    observaciones: str | None = None

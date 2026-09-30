@@ -104,26 +104,26 @@ class ViajeConductorRepository(ViajeRepository):
         )
         return list((await self.session.exec(stmt)).all())
 
-    async def listar_con_fin_desde(self, desde: datetime) -> list[Viaje]:
-        """Viajes que siguen en curso o terminaron después de `desde`.
+    async def listar_recientes(self, desde: datetime) -> list[Viaje]:
+        """Viajes que siguen en ruta o llegaron después de `desde`.
 
         Basta para saber quién está en viaje o todavía en descanso.
         """
         stmt = (
             select(Viaje)
-            .where(Viaje.fecha_fin >= desde)
+            .where(or_(col(Viaje.fecha_llegada).is_(None), col(Viaje.fecha_llegada) >= desde))
             .options(selectinload(Viaje.camion), selectinload(Viaje.carga))
         )
         return list((await self.session.exec(stmt)).all())
 
-    async def tiene_viajes_pendientes(self, id_conductor: int, ahora: datetime) -> bool:
-        """Si tiene viajes no cancelados que aún no terminan (en curso o planificados)."""
+    async def tiene_viajes_en_ruta(self, id_conductor: int) -> bool:
+        """Si tiene viajes no cancelados cuya llegada aún no se registra."""
         stmt = (
             select(Viaje.id)
             .join(Carga, col(Carga.id) == Viaje.id_carga)
             .where(
                 Viaje.id_conductor == id_conductor,
-                Viaje.fecha_fin > ahora,
+                col(Viaje.fecha_llegada).is_(None),
                 Carga.estado != CargaEstado.CANCELADA,
             )
         )

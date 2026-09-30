@@ -8,7 +8,7 @@ export const MERCADERIA_OPCIONES: { valor: MercaderiaTipo; label: string }[] = [
 ];
 
 export const ESTADO_PEDIDO_OPCIONES: { valor: PedidoEstado; label: string }[] = [
-  { valor: 'EN_ESPERA', label: 'En espera (Creado)' },
+  { valor: 'CREADA', label: 'Creada' },
   { valor: 'TRANSITO', label: 'En tránsito' },
   { valor: 'ENTREGADO', label: 'Entregado' },
   { valor: 'CANCELADO', label: 'Cancelado' },
@@ -23,7 +23,7 @@ export const FILTROS_PEDIDOS_VACIOS: PedidoFiltros = {
 
 export const FILTROS_INICIALES_PEDIDOS: PedidoFiltros = {
   ...FILTROS_PEDIDOS_VACIOS,
-  estado: 'EN_ESPERA',
+  estado: 'CREADA',
 };
 
 export const PEDIDO_VACIO: PedidoInput = {

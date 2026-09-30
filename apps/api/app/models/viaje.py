@@ -14,7 +14,14 @@ class Viaje(SQLModel, table=True):
     id_camion: int = Field(foreign_key="camion.id")
     id_carga: int = Field(foreign_key="carga.id")
     fecha_inicio: datetime
+    # Término previsto: se fija al generar el viaje.
     fecha_fin: datetime
+
+    # Datos de la llegada al centro de distribución: se registran al
+    # finalizar el viaje, junto con el paso de la carga a Finalizada.
+    fecha_llegada: Optional[datetime] = Field(default=None)
+    receptor: Optional[str] = Field(default=None)
+    observacion: Optional[str] = Field(default=None)
     
     # Relationships for convenience
     conductor: Optional[Conductor] = Relationship()

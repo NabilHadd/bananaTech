@@ -22,9 +22,10 @@ class PedidoType:
     ventana_fin: datetime
     tipo_mercaderia: MercaderiaTipo
     estado: PedidoEstado
-    fecha_entrega: datetime | None = None
-    receptor: str | None = None
-    observaciones: str | None = None
+    id_carga_activa: int | None = strawberry.field(
+        default=None,
+        description="Carga Creada, Confirmada o En ruta que contiene al pedido.",
+    )
     cliente: ClienteType | None = None
     centro: CentroDistribucionType | None = None
 
@@ -40,9 +41,7 @@ class PedidoType:
             ventana_fin=p.ventana_fin,
             tipo_mercaderia=p.tipo_mercaderia,
             estado=p.estado,
-            fecha_entrega=p.fecha_entrega,
-            receptor=p.receptor,
-            observaciones=p.observaciones,
+            id_carga_activa=carga.id if (carga := p.carga_activa()) else None,
             cliente=ClienteType.from_model(p.cliente) if p.cliente else None,
             centro=CentroDistribucionType.from_model(p.centro) if p.centro else None,
         )

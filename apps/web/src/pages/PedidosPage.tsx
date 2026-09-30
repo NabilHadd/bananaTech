@@ -3,22 +3,18 @@ import { FilterX, LoaderCircle, Package, Plus, WifiOff } from 'lucide-react';
 import {
   cancelarPedido,
   crearPedido,
-  entregarPedido,
   getPedidos,
-  marcarPedidoEnTransito,
 } from '../api/pedido.api';
 import { EmptyState } from '../components/common/EmptyState';
 import { Button } from '../components/ui/Button';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../components/ui/useToast';
 import { PedidoDetalleModal } from '../components/features/pedidos/PedidoDetalleModal';
-import { PedidoEntregaModal } from '../components/features/pedidos/PedidoEntregaModal';
 import { PedidoFilters } from '../components/features/pedidos/PedidoFilters';
 import { PedidoFormModal } from '../components/features/pedidos/PedidoFormModal';
 import { PedidoTable } from '../components/features/pedidos/PedidoTable';
 import { FILTROS_INICIALES_PEDIDOS, FILTROS_PEDIDOS_VACIOS } from '../components/features/pedidos/pedidos.constants';
 import type {
-  EntregaPedidoInput,
   Pedido,
   PedidoFiltros,
   PedidoInput,
@@ -39,7 +35,6 @@ export const PedidosPage: React.FC = () => {
   const [filtros, setFiltros] = useState<PedidoFiltros>(FILTROS_INICIALES_PEDIDOS);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<Pedido | null>(null);
-  const [mostrarEntrega, setMostrarEntrega] = useState(false);
   const { toast, showToast } = useToast();
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -83,20 +78,8 @@ export const PedidosPage: React.FC = () => {
   const handleCrearPedido = async (input: PedidoInput) => {
     try {
       const nuevo = await crearPedido(input);
-      showToast(`Pedido #PED-${String(nuevo.id).padStart(4, '0')} registrado en estado En espera`, 'success');
+      showToast(`Pedido #PED-${String(nuevo.id).padStart(4, '0')} registrado en estado Creada`, 'success');
       setModalAbierto(false);
-      recargar();
-    } catch (e) {
-      showToast(mensajeDe(e), 'error');
-      throw e;
-    }
-  };
-
-  const handleMarcarTransito = async (id: number) => {
-    try {
-      await marcarPedidoEnTransito(id);
-      showToast(`Pedido #PED-${String(id).padStart(4, '0')} pasado a En tránsito`, 'success');
-      setPedidoSeleccionado(null);
       recargar();
     } catch (e) {
       showToast(mensajeDe(e), 'error');
@@ -108,19 +91,6 @@ export const PedidosPage: React.FC = () => {
     try {
       await cancelarPedido(id);
       showToast(`Pedido #PED-${String(id).padStart(4, '0')} cancelado correctamente`, 'success');
-      setPedidoSeleccionado(null);
-      recargar();
-    } catch (e) {
-      showToast(mensajeDe(e), 'error');
-      throw e;
-    }
-  };
-
-  const handleEntregarPedido = async (input: EntregaPedidoInput) => {
-    try {
-      await entregarPedido(input);
-      showToast(`Pedido #PED-${String(input.idPedido).padStart(4, '0')} entregado correctamente`, 'success');
-      setMostrarEntrega(false);
       setPedidoSeleccionado(null);
       recargar();
     } catch (e) {
@@ -156,7 +126,7 @@ export const PedidosPage: React.FC = () => {
             <Package color="var(--accent-primary)" /> Pedidos
           </h1>
           <p className="text-muted">
-            Listado y priorización de pedidos para planificación de transporte (HU3.2, HU3.3 y HU3.4)
+            Listado y priorización de pedidos para planificación de transporte
           </p>
         </div>
         <Button
@@ -191,21 +161,11 @@ export const PedidosPage: React.FC = () => {
         />
       )}
 
-      {pedidoSeleccionado && !mostrarEntrega && (
+      {pedidoSeleccionado && (
         <PedidoDetalleModal
           pedido={pedidoSeleccionado}
           onClose={() => setPedidoSeleccionado(null)}
-          onMarcarTransito={handleMarcarTransito}
           onCancelar={handleCancelarPedido}
-          onAbrirEntrega={() => setMostrarEntrega(true)}
-        />
-      )}
-
-      {mostrarEntrega && pedidoSeleccionado && (
-        <PedidoEntregaModal
-          pedido={pedidoSeleccionado}
-          onSubmit={handleEntregarPedido}
-          onClose={() => setMostrarEntrega(false)}
         />
       )}
     </div>

@@ -1,7 +1,8 @@
 import { Navigate, createBrowserRouter } from 'react-router';
-import { Building2, Package, Truck, Users } from 'lucide-react';
+import { Boxes, Building2, Package, Truck, Users } from 'lucide-react';
 import { AppLayout } from './components/common/AppLayout';
 import type { NavItem } from './components/common/TopBar';
+import { CargasPage } from './pages/CargasPage';
 import { ClientesPage } from './pages/ClientesPage';
 import { ConductoresPage } from './pages/ConductoresPage';
 import { FlotaPage } from './pages/FlotaPage';
@@ -13,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/conductores', label: 'Conductores', icon: <Users size={16} /> },
   { to: '/clientes', label: 'Clientes', icon: <Building2 size={16} /> },
   { to: '/pedidos', label: 'Pedidos', icon: <Package size={16} /> },
+  { to: '/cargas', label: 'Cargas', icon: <Boxes size={16} /> },
 ];
 
 export const router = createBrowserRouter([
@@ -25,6 +27,7 @@ export const router = createBrowserRouter([
       { path: 'conductores', element: <ConductoresPage /> },
       { path: 'clientes', element: <ClientesPage /> },
       { path: 'pedidos', element: <PedidosPage /> },
+      { path: 'cargas', element: <CargasPage /> },
       { path: '*', element: <Navigate to="/flota" replace /> },
     ],
   },

@@ -185,7 +185,6 @@ class ConductoresService:
         await self._conductor_existente(id_conductor)
         viajes = await self.viajes.listar_por_conductor(id_conductor)
         centros = await self.viajes.centros_por_id({v.carga.id_centro for v in viajes})
-        ahora = tiempo.ahora()
 
         filas = [
             ViajeDelConductor(
@@ -195,7 +194,7 @@ class ConductoresService:
                 destino=centros[v.carga.id_centro].direccion,
                 distancia_km=centros[v.carga.id_centro].distancia_km,
                 peso_kg=sum((p.peso_kg for p in v.carga.pedidos), Decimal(0)),
-                estado=estado_viaje(v, ahora),
+                estado=estado_viaje(v),
             )
             for v in viajes
         ]
@@ -271,11 +270,11 @@ class ConductoresService:
         conductor = await self._conductor_existente(id)
         if not conductor.activo:
             raise DomainError(f"{_nombre(conductor)} ya está dado de baja")
-        # Darlo de baja dejaría sin conductor a sus viajes en curso o planificados.
-        if await self.viajes.tiene_viajes_pendientes(id, tiempo.ahora()):
+        # Darlo de baja dejaría sin conductor a sus viajes en ruta.
+        if await self.viajes.tiene_viajes_en_ruta(id):
             raise DomainError(
-                f"{_nombre(conductor)} tiene viajes en curso o planificados; "
-                "reasígnelos o cancélelos antes de darlo de baja"
+                f"{_nombre(conductor)} tiene viajes en ruta; "
+                "finalícelos o cancélelos antes de darlo de baja"
             )
         conductor.activo = False
         await self.session.commit()
@@ -317,7 +316,7 @@ class ConductoresService:
     ) -> list[ConductorEvaluado]:
         ahora = tiempo.ahora()
         descanso = timedelta(hours=get_settings().descanso_minimo_horas)
-        viajes = await self.viajes.listar_con_fin_desde(ahora - descanso)
+        viajes = await self.viajes.listar_recientes(ahora - descanso)
         por_conductor: dict[int, list[Viaje]] = {}
         for v in viajes:
             por_conductor.setdefault(v.id_conductor, []).append(v)
@@ -342,17 +341,17 @@ class ConductoresService:
         vigentes = [
             v
             for v in viajes_recientes
-            if estado_viaje(v, ahora) != EstadoViaje.CANCELADO
+            if estado_viaje(v) != EstadoViaje.CANCELADO
         ]
 
         en_curso = next(
-            (v for v in vigentes if v.fecha_inicio <= ahora < v.fecha_fin), None
+            (v for v in vigentes if estado_viaje(v) == EstadoViaje.EN_RUTA), None
         )
         if en_curso:
             return ConductorEvaluado(
                 conductor,
                 EstadoConductor.EN_VIAJE,
-                f"En viaje con el camión {en_curso.camion.patente} hasta el {_fecha_hora(en_curso.fecha_fin)}.",
+                f"En viaje con el camión {en_curso.camion.patente}, llegada prevista el {_fecha_hora(en_curso.fecha_fin)}.",
                 hoy,
             )
 
@@ -375,7 +374,8 @@ class ConductoresService:
                 hoy,
             )
 
-        terminados = [v.fecha_fin for v in vigentes if v.fecha_fin <= ahora]
+        # El descanso corre desde la llegada real, no desde el término previsto.
+        terminados = [v.fecha_llegada for v in vigentes if v.fecha_llegada is not None]
         if terminados:
             libre = max(terminados) + descanso
             if libre > ahora:

@@ -5,21 +5,21 @@ import type { BadgeTone } from '../../ui/Badge';
 import type { MercaderiaTipo, PedidoEstado } from './types';
 
 const ESTADO_PEDIDO_TONE: Record<PedidoEstado, BadgeTone> = {
-  EN_ESPERA: 'warning',
+  CREADA: 'warning',
   TRANSITO: 'warning',
   ENTREGADO: 'success',
   CANCELADO: 'neutral',
 };
 
 const ESTADO_PEDIDO_LABEL: Record<PedidoEstado, string> = {
-  EN_ESPERA: 'En espera (Creado)',
+  CREADA: 'Creada',
   TRANSITO: 'En tránsito',
   ENTREGADO: 'Entregado',
   CANCELADO: 'Cancelado',
 };
 
 const ESTADO_PEDIDO_ICON: Record<PedidoEstado, React.ReactNode> = {
-  EN_ESPERA: <Clock size={12} />,
+  CREADA: <Clock size={12} />,
   TRANSITO: <Truck size={12} />,
   ENTREGADO: <CheckCircle2 size={12} />,
   CANCELADO: <XCircle size={12} />,

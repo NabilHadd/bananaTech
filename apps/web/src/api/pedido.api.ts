@@ -1,10 +1,13 @@
 /**
  * Pedidos (Épica 3: HU3.2 y HU3.3): queries y mutations contra la API GraphQL.
+ *
+ * El estado no se cambia desde aquí salvo la cancelación: Tránsito y Entregado
+ * los aplica el viaje de su carga.
  */
 import { graphqlRequest } from './graphql.client';
-import type { EntregaPedidoInput, Pedido, PedidoFiltros, PedidoInput } from '../components/features/pedidos/types';
+import type { Pedido, PedidoFiltros, PedidoInput } from '../components/features/pedidos/types';
 
-const PEDIDO_CAMPOS = /* GraphQL */ `
+export const PEDIDO_CAMPOS = /* GraphQL */ `
   fragment PedidoCampos on Pedido {
     id
     idCliente
@@ -15,9 +18,7 @@ const PEDIDO_CAMPOS = /* GraphQL */ `
     ventanaFin
     tipoMercaderia
     estado
-    fechaEntrega
-    receptor
-    observaciones
+    idCargaActiva
     cliente {
       id
       razon
@@ -55,24 +56,6 @@ const PEDIDO_QUERY = /* GraphQL */ `
 const CREAR_PEDIDO_MUTATION = /* GraphQL */ `
   mutation CrearPedido($input: PedidoInput!) {
     crearPedido(input: $input) {
-      ...PedidoCampos
-    }
-  }
-  ${PEDIDO_CAMPOS}
-`;
-
-const MARCAR_TRANSITO_MUTATION = /* GraphQL */ `
-  mutation MarcarPedidoEnTransito($id: Int!) {
-    marcarPedidoEnTransito(id: $id) {
-      ...PedidoCampos
-    }
-  }
-  ${PEDIDO_CAMPOS}
-`;
-
-const ENTREGAR_PEDIDO_MUTATION = /* GraphQL */ `
-  mutation EntregarPedido($input: EntregaPedidoInput!) {
-    entregarPedido(input: $input) {
       ...PedidoCampos
     }
   }
@@ -128,22 +111,6 @@ export async function crearPedido(input: PedidoInput): Promise<Pedido> {
     { input },
   );
   return data.crearPedido;
-}
-
-export async function marcarPedidoEnTransito(id: number): Promise<Pedido> {
-  const data = await graphqlRequest<{ marcarPedidoEnTransito: Pedido }>(
-    MARCAR_TRANSITO_MUTATION,
-    { id },
-  );
-  return data.marcarPedidoEnTransito;
-}
-
-export async function entregarPedido(input: EntregaPedidoInput): Promise<Pedido> {
-  const data = await graphqlRequest<{ entregarPedido: Pedido }>(
-    ENTREGAR_PEDIDO_MUTATION,
-    { input },
-  );
-  return data.entregarPedido;
 }
 
 export async function cancelarPedido(id: number): Promise<Pedido> {

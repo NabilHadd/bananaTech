@@ -19,6 +19,7 @@ class PedidoRepository:
             .options(
                 selectinload(Pedido.cliente).selectinload(Cliente.centros),
                 selectinload(Pedido.centro),
+                selectinload(Pedido.cargas),
             )
             .execution_options(populate_existing=True)
         )

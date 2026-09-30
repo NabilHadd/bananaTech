@@ -4,7 +4,7 @@ import strawberry
 from strawberry.types import Info
 
 from app.core.context import Context
-from app.pedidos.inputs import EntregaPedidoInput, PedidoFiltros, PedidoInput
+from app.pedidos.inputs import PedidoFiltros, PedidoInput
 from app.pedidos.types import PedidoType
 
 
@@ -46,26 +46,7 @@ class PedidosMutation:
         pedido = await info.context.pedidos.crear_pedido(input.to_datos())
         return PedidoType.from_model(pedido)
 
-    @strawberry.mutation(description="Avanza un pedido al estado En tránsito (HU3.3).")
-    async def marcar_pedido_en_transito(
-        self, info: Info[Context, None], id: int
-    ) -> PedidoType:
-        pedido = await info.context.pedidos.avanzar_a_transito(id)
-        return PedidoType.from_model(pedido)
-
-    @strawberry.mutation(description="Marca un pedido como entregado (HU3.3).")
-    async def entregar_pedido(
-        self, info: Info[Context, None], input: EntregaPedidoInput
-    ) -> PedidoType:
-        pedido = await info.context.pedidos.entregar_pedido(
-            id=input.id_pedido,
-            fecha_entrega=input.fecha_entrega,
-            receptor=input.receptor,
-            observaciones=input.observaciones,
-        )
-        return PedidoType.from_model(pedido)
-
-    @strawberry.mutation(description="Cancela un pedido (HU3.3).")
+    @strawberry.mutation(description="Cancela un pedido Creada que no está en una carga (HU3.3).")
     async def cancelar_pedido(
         self, info: Info[Context, None], id: int
     ) -> PedidoType:

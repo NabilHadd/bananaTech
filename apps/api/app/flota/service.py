@@ -5,7 +5,7 @@ hace commit, así que cada método público es una operación completa.
 """
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 
@@ -47,15 +47,16 @@ class EstadoViaje(StrEnum):
     CANCELADO = "CANCELADO"
 
 
-def estado_viaje(viaje: Viaje, ahora: datetime) -> EstadoViaje:
-    """Estado de un viaje según su carga y sus fechas; no se guarda.
+def estado_viaje(viaje: Viaje) -> EstadoViaje:
+    """Estado de un viaje según su carga y su llegada; no se guarda.
 
-    Lo usan el historial del camión y el de los conductores (E02). Requiere la
-    carga del viaje ya cargada.
+    Un viaje sigue en ruta hasta que se registra su llegada, aunque se haya
+    pasado su término previsto (`fecha_fin`). Lo usan el historial del camión
+    y el de los conductores (E02). Requiere la carga del viaje ya cargada.
     """
     if viaje.carga.estado == CargaEstado.CANCELADA:
         return EstadoViaje.CANCELADO
-    if viaje.fecha_fin > ahora:
+    if viaje.fecha_llegada is None:
         return EstadoViaje.EN_RUTA
     return EstadoViaje.FINALIZADO
 
@@ -167,7 +168,6 @@ class FlotaService:
         camion = await self._camion_existente(id_camion)
         viajes = await self.viajes.listar_por_camion(id_camion)
         centros = await self.viajes.centros_por_id({v.carga.id_centro for v in viajes})
-        ahora = tiempo.ahora()
 
         filas: list[ViajeDelCamion] = []
         for v in viajes:
@@ -182,7 +182,7 @@ class FlotaService:
                     conductor=f"{v.conductor.nombres} {v.conductor.apellidos}",
                     peso_kg=peso,
                     ocupacion_pct=round(float(peso / camion.peso_kg * 100), 1),
-                    estado=estado_viaje(v, ahora),
+                    estado=estado_viaje(v),
                 )
             )
 

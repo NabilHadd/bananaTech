@@ -2,6 +2,7 @@ import strawberry
 from strawberry.extensions import MaskErrors
 from strawberry.tools import merge_types
 
+from app.cargas.schema import CargasMutation, CargasQuery
 from app.clientes.schema import ClientesMutation, ClientesQuery
 from app.conductores.schema import ConductoresMutation, ConductoresQuery
 from app.core.config import get_settings
@@ -11,10 +12,12 @@ from app.graphql.extensions import SesionSerializada
 from app.pedidos.schema import PedidosMutation, PedidosQuery
 
 # Cada épica aporta su Query y su Mutation; aquí se unen en un solo schema.
-Query = merge_types("Query", (FlotaQuery, ConductoresQuery, ClientesQuery, PedidosQuery))
+Query = merge_types(
+    "Query", (FlotaQuery, ConductoresQuery, ClientesQuery, PedidosQuery, CargasQuery)
+)
 Mutation = merge_types(
     "Mutation",
-    (FlotaMutation, ConductoresMutation, ClientesMutation, PedidosMutation),
+    (FlotaMutation, ConductoresMutation, ClientesMutation, PedidosMutation, CargasMutation),
 )
 
 

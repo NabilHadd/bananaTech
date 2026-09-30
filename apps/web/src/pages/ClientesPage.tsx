@@ -142,7 +142,7 @@ export const ClientesPage: React.FC = () => {
             <Building2 color="var(--accent-primary)" /> Clientes
           </h1>
           <p className="text-muted">
-            Administración de clientes, direcciones y centros de distribución (HU3.1)
+            Administración de clientes, direcciones y centros de distribución
           </p>
         </div>
         <Button
