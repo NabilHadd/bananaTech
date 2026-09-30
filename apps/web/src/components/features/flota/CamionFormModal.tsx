@@ -18,30 +18,42 @@ interface CamionFormModalProps {
 const documentosVacios = (): DocumentoInput[] =>
   DOCUMENTOS_OBLIGATORIOS.map((tipo) => ({ tipo, fechaEmision: '', fechaVencimiento: '' }));
 
-function valoresIniciales(camion: Camion | undefined, tipos: TipoCamion[]): CamionInput {
+interface CamionFormState {
+  patente: string;
+  marca: string;
+  modelo: string;
+  anio: string;
+  idTipoCamion: number;
+  pesoMaxKg: string;
+  volumenMaxM3: string;
+  rendimientoBaseKmL: string;
+  kilometrajeActual: string;
+}
+
+function valoresIniciales(camion: Camion | undefined, tipos: TipoCamion[]): CamionFormState {
   if (camion) {
     return {
       patente: camion.patente,
       marca: camion.marca,
       modelo: camion.modelo,
-      anio: camion.anio,
+      anio: String(camion.anio),
       idTipoCamion: camion.idTipoCamion,
-      pesoMaxKg: camion.pesoMaxKg,
-      volumenMaxM3: camion.volumenMaxM3,
-      rendimientoBaseKmL: camion.rendimientoBaseKmL,
-      kilometrajeActual: camion.kilometrajeActual,
+      pesoMaxKg: String(camion.pesoMaxKg),
+      volumenMaxM3: String(camion.volumenMaxM3),
+      rendimientoBaseKmL: String(camion.rendimientoBaseKmL),
+      kilometrajeActual: String(camion.kilometrajeActual),
     };
   }
   return {
     patente: '',
     marca: '',
     modelo: '',
-    anio: new Date().getFullYear(),
+    anio: '',
     idTipoCamion: tipos[0]?.id ?? 0,
-    pesoMaxKg: 25000,
-    volumenMaxM3: 90,
-    rendimientoBaseKmL: 2.8,
-    kilometrajeActual: 0,
+    pesoMaxKg: '',
+    volumenMaxM3: '',
+    rendimientoBaseKmL: '',
+    kilometrajeActual: '',
   };
 }
 
@@ -56,18 +68,63 @@ function valoresIniciales(camion: Camion | undefined, tipos: TipoCamion[]): Cami
  */
 export const CamionFormModal: React.FC<CamionFormModalProps> = ({ camion, tipos, onSubmit, onClose }) => {
   const esRegistro = camion === undefined;
-  const [form, setForm] = useState<CamionInput>(() => valoresIniciales(camion, tipos));
+  const [form, setForm] = useState<CamionFormState>(() => valoresIniciales(camion, tipos));
   const [documentos, setDocumentos] = useState<DocumentoInput[]>(documentosVacios);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
-  const set = <K extends keyof CamionInput>(campo: K, valor: CamionInput[K]) =>
+  const set = <K extends keyof CamionFormState>(campo: K, valor: CamionFormState[K]) => {
+    setErrorLocal(null);
     setForm((prev) => ({ ...prev, [campo]: valor }));
+  };
 
   const setDocumento = (index: number, campo: 'fechaEmision' | 'fechaVencimiento', valor: string) =>
     setDocumentos((prev) => prev.map((d, i) => (i === index ? { ...d, [campo]: valor } : d)));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(esRegistro ? { ...form, documentos } : form);
+    setErrorLocal(null);
+
+    const anio = Number(form.anio);
+    const peso = Number(form.pesoMaxKg);
+    const vol = Number(form.volumenMaxM3);
+    const rend = Number(form.rendimientoBaseKmL);
+    const km = Number(form.kilometrajeActual);
+
+    const anioMax = new Date().getFullYear() + 1;
+    if (form.anio.trim() === '' || isNaN(anio) || anio < 1990 || anio > anioMax) {
+      setErrorLocal(`El año de fabricación debe ser un número entre 1990 y ${anioMax}`);
+      return;
+    }
+    if (form.pesoMaxKg.trim() === '' || isNaN(peso) || peso <= 0) {
+      setErrorLocal('La capacidad máxima (kg) debe ser mayor a 0');
+      return;
+    }
+    if (form.volumenMaxM3.trim() === '' || isNaN(vol) || vol <= 0) {
+      setErrorLocal('La capacidad de volumen (m³) debe ser mayor a 0');
+      return;
+    }
+    if (form.rendimientoBaseKmL.trim() === '' || isNaN(rend) || rend <= 0) {
+      setErrorLocal('El rendimiento base (km/L) debe ser mayor a 0');
+      return;
+    }
+    if (form.kilometrajeActual.trim() === '' || isNaN(km) || km < 0) {
+      setErrorLocal('El kilometraje actual no puede ser negativo');
+      return;
+    }
+
+    const payload: CamionInput = {
+      patente: form.patente.trim().toUpperCase(),
+      marca: form.marca.trim(),
+      modelo: form.modelo.trim(),
+      anio,
+      idTipoCamion: form.idTipoCamion,
+      pesoMaxKg: peso,
+      volumenMaxM3: vol,
+      rendimientoBaseKmL: rend,
+      kilometrajeActual: Math.round(km),
+    };
+
+    onSubmit(esRegistro ? { ...payload, documentos } : payload);
   };
 
   return (
@@ -78,6 +135,22 @@ export const CamionFormModal: React.FC<CamionFormModalProps> = ({ camion, tipos,
       maxWidth={esRegistro ? '640px' : '560px'}
     >
       <form onSubmit={handleSubmit} className="form-grid">
+        {errorLocal && (
+          <div
+            className="form-span-2"
+            style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid var(--status-error)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--status-error)',
+              fontSize: '0.875rem',
+            }}
+          >
+            {errorLocal}
+          </div>
+        )}
+
         <Field label="Patente *">
           <input
             className="form-control"
@@ -92,8 +165,9 @@ export const CamionFormModal: React.FC<CamionFormModalProps> = ({ camion, tipos,
             className="form-control"
             type="number"
             required
+            placeholder={String(new Date().getFullYear())}
             value={form.anio}
-            onChange={(e) => set('anio', Number(e.target.value))}
+            onChange={(e) => set('anio', e.target.value)}
           />
         </Field>
 
@@ -134,19 +208,22 @@ export const CamionFormModal: React.FC<CamionFormModalProps> = ({ camion, tipos,
           <input
             className="form-control"
             type="number"
+            step="any"
             required
+            placeholder="Ej. 25000"
             value={form.pesoMaxKg}
-            onChange={(e) => set('pesoMaxKg', Number(e.target.value))}
+            onChange={(e) => set('pesoMaxKg', e.target.value)}
           />
         </Field>
         <Field label="Capacidad de volumen (m³) *">
           <input
             className="form-control"
             type="number"
-            step="0.01"
+            step="any"
             required
+            placeholder="Ej. 90"
             value={form.volumenMaxM3}
-            onChange={(e) => set('volumenMaxM3', Number(e.target.value))}
+            onChange={(e) => set('volumenMaxM3', e.target.value)}
           />
         </Field>
 
@@ -154,21 +231,26 @@ export const CamionFormModal: React.FC<CamionFormModalProps> = ({ camion, tipos,
           <input
             className="form-control"
             type="number"
-            step="0.1"
+            step="any"
             required
+            placeholder="Ej. 2.8"
             value={form.rendimientoBaseKmL}
-            onChange={(e) => set('rendimientoBaseKmL', Number(e.target.value))}
+            onChange={(e) => set('rendimientoBaseKmL', e.target.value)}
           />
         </Field>
         <Field label="Kilometraje actual (km) *">
           <input
             className="form-control"
             type="number"
+            step="1"
+            min="0"
             required
+            placeholder="Ej. 0"
             value={form.kilometrajeActual}
-            onChange={(e) => set('kilometrajeActual', Number(e.target.value))}
+            onChange={(e) => set('kilometrajeActual', e.target.value)}
           />
         </Field>
+
 
         {esRegistro && (
           <fieldset className="form-section form-span-2">

@@ -4,6 +4,8 @@ from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 from strawberry.fastapi import BaseContext
 
+from app.clientes.repository import CentroDistribucionRepository, ClienteRepository
+from app.clientes.service import ClientesService
 from app.conductores.repository import (
     ClaseLicenciaRepository,
     ConductorRepository,
@@ -13,6 +15,8 @@ from app.conductores.service import ConductoresService
 from app.core.db import get_session
 from app.flota.repository import CamionRepository, TipoCamionRepository, ViajeRepository
 from app.flota.service import FlotaService
+from app.pedidos.repository import PedidoRepository
+from app.pedidos.service import PedidosService
 
 
 class Context(BaseContext):
@@ -27,6 +31,8 @@ class Context(BaseContext):
         self.session = session
         # Service y repositorios comparten la sesión: un commit del service
         # confirma todo lo que hicieron los repositorios en este request.
+        cliente_repo = ClienteRepository(session)
+        centro_repo = CentroDistribucionRepository(session)
         self.flota = FlotaService(
             session,
             CamionRepository(session),
@@ -38,6 +44,17 @@ class Context(BaseContext):
             ConductorRepository(session),
             ClaseLicenciaRepository(session),
             ViajeConductorRepository(session),
+        )
+        self.clientes = ClientesService(
+            session,
+            cliente_repo,
+            centro_repo,
+        )
+        self.pedidos = PedidosService(
+            session,
+            PedidoRepository(session),
+            cliente_repo,
+            centro_repo,
         )
 
 

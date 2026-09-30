@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -12,6 +12,8 @@ interface ModalProps {
   footer?: React.ReactNode;
   maxWidth?: string;
   tone?: 'default' | 'danger';
+  zIndex?: number;
+  preventCloseOnBackdrop?: boolean;
   children: React.ReactNode;
 }
 
@@ -28,10 +30,30 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth = '560px',
   tone = 'default',
+  zIndex,
+  preventCloseOnBackdrop = false,
   children,
-}) =>
-  createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
+}) => {
+  const isMouseDownOnBackdrop = useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isMouseDownOnBackdrop.current = e.target === e.currentTarget;
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (isMouseDownOnBackdrop.current && e.target === e.currentTarget && !preventCloseOnBackdrop) {
+      onClose();
+    }
+    isMouseDownOnBackdrop.current = false;
+  };
+
+  return createPortal(
+    <div
+      className="modal-backdrop"
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      style={zIndex ? { zIndex } : undefined}
+    >
       <div
         className={`modal-window${tone === 'danger' ? ' modal-danger' : ''}`}
         style={{ maxWidth }}
@@ -58,3 +80,4 @@ export const Modal: React.FC<ModalProps> = ({
     </div>,
     document.body,
   );
+};
