@@ -21,7 +21,7 @@ from app.core.db import get_session
 from app.flota.repository import (
     CamionRepository,
     TipoCamionRepository,
-    ViajeRepository)
+    ViajeCamionRepository)
 from app.flota.service import FlotaService
 
 from app.pedidos.repository import PedidoRepository
@@ -49,7 +49,7 @@ class Context(BaseContext):
         pedido_repo = PedidoRepository(session)
         conductor_repo = ConductorRepository(session)
         tipo_camion_repo = TipoCamionRepository(session)
-        viaje_repo = ViajeRepository(session)
+        viaje_camion_repo = ViajeCamionRepository(session)
         viaje_conductor_repo = ViajeConductorRepository(session)
         clase_licencia_repo = ClaseLicenciaRepository(session)
         cargas_repo = CargaRepository(session)
@@ -60,7 +60,7 @@ class Context(BaseContext):
             session,
             camion_repo,
             tipo_camion_repo,
-            viaje_repo,
+            viaje_camion_repo,
         )
         self.conductores = ConductoresService(
             session,

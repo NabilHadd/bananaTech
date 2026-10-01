@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.flota.repository import ViajeRepository
+from app.flota.repository import ViajeCamionRepository
 from app.models import (
     Carga,
     CargaEstado,
@@ -85,7 +85,7 @@ class ConductorRepository:
         self.session.add(conductor)
 
 
-class ViajeConductorRepository(ViajeRepository):
+class ViajeConductorRepository(ViajeCamionRepository):
     """Viajes vistos desde el conductor (historial y disponibilidad de la HU2.1).
 
     Reutiliza `centros_por_id` del repositorio de la flota. La gestión de

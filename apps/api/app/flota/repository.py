@@ -77,7 +77,7 @@ class CamionRepository:
         self.session.add(camion)
 
 
-class ViajeRepository:
+class ViajeCamionRepository:
     """Viajes vistos desde el camión (historial de la HU1.3).
 
     La gestión de viajes es de la E05; aquí sólo se leen.
