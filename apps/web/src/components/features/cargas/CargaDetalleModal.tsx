@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import {
   AlertCircle,
   AlertTriangle,
   Boxes,
   Gauge,
+  Navigation,
   Package,
   PackageCheck,
   PackagePlus,
@@ -48,8 +50,11 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
   onConfirmar,
   onCancelar,
 }) => {
+  const navigate = useNavigate();
   const editable = carga.estado === 'CREADA';
   const cancelable = carga.estado === 'CREADA' || carga.estado === 'CONFIRMADA';
+  // La ocupación sólo sirve para decidir el camión: después de salir no aplica.
+  const conOcupacion = cancelable;
 
   const [pestana, setPestana] = useState<Pestana>('pedidos');
   const [procesando, setProcesando] = useState(false);
@@ -62,12 +67,13 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
   const [ocupacion, setOcupacion] = useState<OcupacionCarga | null>(null);
 
   useEffect(() => {
+    if (!conOcupacion) return;
     const control = new AbortController();
     getCamiones({ busqueda: '', idTipoCamion: null, estado: null, capacidadMinKg: null }, control.signal)
       .then((data) => setCamiones(data.filter((c) => c.estado !== 'INACTIVO')))
       .catch(() => undefined);
     return () => control.abort();
-  }, []);
+  }, [conOcupacion]);
 
   // Se recalcula al cambiar de camión o cuando la carga gana o pierde pedidos (HU4.3).
   useEffect(() => {
@@ -107,10 +113,12 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
       icon: <Package size={15} />,
       alert: carga.incompatibilidad !== null,
     },
-    { id: 'ocupacion', label: 'Ocupación', icon: <Gauge size={15} /> },
+    ...(conOcupacion ? [{ id: 'ocupacion' as const, label: 'Ocupación', icon: <Gauge size={15} /> }] : []),
   ];
 
   const unico = carga.pedidos.length === 1;
+  // Si la carga deja de admitir ocupación con la ficha abierta (p. ej. se cancela), vuelve a pedidos.
+  const pestanaVisible: Pestana = conOcupacion ? pestana : 'pedidos';
 
   return (
     <>
@@ -141,7 +149,7 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
                 </div>
               ))}
             </div>
-            <Tabs items={pestanas} active={pestana} onChange={setPestana} />
+            <Tabs items={pestanas} active={pestanaVisible} onChange={setPestana} />
           </>
         }
         footer={
@@ -156,6 +164,16 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
                   style={{ marginRight: 'auto' }}
                 >
                   Cancelar carga
+                </Button>
+              )}
+              {carga.estado === 'CONFIRMADA' && (
+                <Button
+                  variant="primary"
+                  icon={<Navigation size={16} />}
+                  disabled={procesando}
+                  onClick={() => navigate(`/viajes?carga=${carga.id}`)}
+                >
+                  Generar viaje
                 </Button>
               )}
               {editable && (
@@ -181,7 +199,7 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
             </div>
           )}
 
-          {pestana === 'pedidos' && (
+          {pestanaVisible === 'pedidos' && (
             <>
               {carga.incompatibilidad && (
                 <div className="callout callout-error" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -245,7 +263,7 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
             </>
           )}
 
-          {pestana === 'ocupacion' && (
+          {pestanaVisible === 'ocupacion' && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Si la llevara el camión</span>
@@ -263,14 +281,7 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
                   minWidth="240px"
                 />
               </div>
-              {ocupacion ? (
-                <OcupacionPanel ocupacion={ocupacion} />
-              ) : (
-                <div className="callout">
-                  Elija un camión para ver qué porcentaje de su capacidad en peso y en volumen ocuparía esta carga,
-                  y cuál de los dos la limita.
-                </div>
-              )}
+              {ocupacion && <OcupacionPanel ocupacion={ocupacion} />}
             </>
           )}
         </div>

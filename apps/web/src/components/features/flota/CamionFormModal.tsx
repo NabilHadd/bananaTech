@@ -111,6 +111,13 @@ export const CamionFormModal: React.FC<CamionFormModalProps> = ({ camion, tipos,
       setErrorLocal('El kilometraje actual no puede ser negativo');
       return;
     }
+    // Aviso temprano: la regla la aplica la API (el odómetro sólo avanza).
+    if (camion && km < camion.kilometrajeActual) {
+      setErrorLocal(
+        `El kilometraje no puede disminuir: el camión ya registra ${camion.kilometrajeActual.toLocaleString('es-CL')} km`,
+      );
+      return;
+    }
 
     const payload: CamionInput = {
       patente: form.patente.trim().toUpperCase(),

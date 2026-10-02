@@ -121,8 +121,8 @@ export const AgregarCentroModal: React.FC<AgregarCentroModalProps> = ({
       return;
     }
     const km = Number(kmStr);
-    if (isNaN(km) || km < 0) {
-      setErrorLocal('La distancia debe ser un número mayor o igual a 0');
+    if (isNaN(km) || km <= 0) {
+      setErrorLocal('La distancia debe ser mayor que 0 km: la base es el origen de los viajes, no un destino');
       return;
     }
 
@@ -132,8 +132,8 @@ export const AgregarCentroModal: React.FC<AgregarCentroModalProps> = ({
       return;
     }
     const min = Number(minStr);
-    if (isNaN(min) || min < 0) {
-      setErrorLocal('El tiempo de viaje debe ser un número entero mayor o igual a 0');
+    if (isNaN(min) || min <= 0) {
+      setErrorLocal('El tiempo de viaje debe ser mayor que 0 minutos');
       return;
     }
 
@@ -272,7 +272,7 @@ export const AgregarCentroModal: React.FC<AgregarCentroModalProps> = ({
           </div>
         </div>
       ) : (
-        <form onSubmit={handleCrearNuevo} className="form-grid">
+        <form noValidate onSubmit={handleCrearNuevo} className="form-grid">
           {errorLocal && (
             <div
               className="form-span-2"
@@ -306,7 +306,6 @@ export const AgregarCentroModal: React.FC<AgregarCentroModalProps> = ({
               className="form-control"
               type="number"
               step="any"
-              min="0"
               required
               placeholder="Ej. 12.5"
               value={distanciaKmNueva}
@@ -319,7 +318,6 @@ export const AgregarCentroModal: React.FC<AgregarCentroModalProps> = ({
               className="form-control"
               type="number"
               step="1"
-              min="0"
               required
               placeholder="Ej. 25"
               value={distanciaMinNueva}

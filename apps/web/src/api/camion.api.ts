@@ -16,7 +16,7 @@ import type {
 } from '../components/features/flota/types';
 
 // Campos de Camion que piden el listado, la ficha y las mutations.
-const CAMION_CAMPOS = /* GraphQL */ `
+export const CAMION_CAMPOS = /* GraphQL */ `
   fragment CamionCampos on Camion {
     id
     patente

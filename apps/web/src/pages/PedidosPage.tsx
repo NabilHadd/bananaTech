@@ -157,6 +157,7 @@ export const PedidosPage: React.FC = () => {
       {modalAbierto && (
         <PedidoFormModal
           onSubmit={handleCrearPedido}
+          onInvalido={(mensaje) => showToast(mensaje, 'error')}
           onClose={() => setModalAbierto(false)}
         />
       )}

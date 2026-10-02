@@ -167,7 +167,7 @@ export const ClienteFormModal: React.FC<ClienteFormModalProps> = ({
           <Field label="Teléfono de Contacto">
             <input
               className="form-control"
-              placeholder="+56 9 1234 5678"
+              placeholder="+569 1234 5678"
               value={form.telefono}
               onChange={(e) => set('telefono', e.target.value)}
             />

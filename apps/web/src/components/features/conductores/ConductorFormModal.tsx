@@ -70,7 +70,7 @@ export const ConductorFormModal: React.FC<ConductorFormModalProps> = ({ conducto
           <input
             className="form-control"
             required
-            placeholder="+56 9 1234 5678"
+            placeholder="+569 1234 5678"
             value={form.telefono}
             onChange={(e) => set('telefono', e.target.value)}
           />

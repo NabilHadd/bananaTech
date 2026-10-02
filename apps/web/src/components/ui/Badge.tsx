@@ -1,6 +1,12 @@
 import React from 'react';
 
-export type BadgeTone = 'success' | 'warning' | 'error' | 'neutral';
+/**
+ * Dentro de una sección, cada estado usa un tono distinto. Entre secciones se
+ * repite el significado: info = recién creado, progress = confirmado,
+ * warning = en curso, success = terminado o disponible, error = bloqueado,
+ * neutral = cancelado, inactivo o en pausa.
+ */
+export type BadgeTone = 'success' | 'warning' | 'error' | 'neutral' | 'info' | 'progress';
 
 interface BadgeProps {
   tone: BadgeTone;

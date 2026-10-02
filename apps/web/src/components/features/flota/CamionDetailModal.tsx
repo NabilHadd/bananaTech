@@ -44,6 +44,11 @@ const ESTADO_CALLOUT: Record<EstadoCamion, { className: string; title: string; i
     title: 'Documentación obligatoria al día',
     icon: <ShieldCheck size={26} color="var(--status-success)" />,
   },
+  EN_VIAJE: {
+    className: 'callout-neutral',
+    title: 'Camión en viaje',
+    icon: <Navigation size={26} color="var(--text-tertiary)" />,
+  },
   BLOQUEADO: {
     className: 'callout-error',
     title: 'Camión excluido de asignaciones',

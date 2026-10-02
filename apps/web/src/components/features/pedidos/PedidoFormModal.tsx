@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, MapPin, Package } from 'lucide-react';
+import { MapPin, Package } from 'lucide-react';
 import { getClientes } from '../../../api/cliente.api';
 import { Modal } from '../../common/Modal';
 import { Button } from '../../ui/Button';
@@ -9,7 +9,10 @@ import { MERCADERIA_OPCIONES } from './pedidos.constants';
 import type { MercaderiaTipo, PedidoInput } from './types';
 
 interface PedidoFormModalProps {
+  /** Si la API rechaza el pedido, la página muestra el error y rechaza la promesa. */
   onSubmit: (input: PedidoInput) => Promise<void>;
+  /** Muestra un dato inválido del formulario, con el mismo toast que el resto del sistema. */
+  onInvalido: (mensaje: string) => void;
   onClose: () => void;
 }
 
@@ -25,12 +28,12 @@ interface FormState {
 
 export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
   onSubmit,
+  onInvalido,
   onClose,
 }) => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [cargandoClientes, setCargandoClientes] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   const [form, setForm] = useState<FormState>({
     idCliente: '',
@@ -56,7 +59,6 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
   const centrosDisponibles = clienteSeleccionado?.centros ?? [];
 
   const handleClienteChange = (nuevoIdCliente: number | '') => {
-    setErrorLocal(null);
     setForm((prev) => ({
       ...prev,
       idCliente: nuevoIdCliente,
@@ -66,37 +68,36 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorLocal(null);
 
     if (form.idCliente === '') {
-      setErrorLocal('Debe seleccionar un cliente.');
+      onInvalido('Debe seleccionar un cliente.');
       return;
     }
 
     if (form.idCentro === '') {
-      setErrorLocal('Debe seleccionar el centro de distribución de destino.');
+      onInvalido('Debe seleccionar el centro de distribución de destino.');
       return;
     }
 
     const peso = parseFloat(form.pesoKg);
     if (isNaN(peso) || peso <= 0) {
-      setErrorLocal('El peso debe ser mayor a 0 kg.');
+      onInvalido('El peso debe ser mayor a 0 kg.');
       return;
     }
 
     const volumen = parseFloat(form.volumenM3);
     if (isNaN(volumen) || volumen <= 0) {
-      setErrorLocal('El volumen debe ser mayor a 0 m³.');
+      onInvalido('El volumen debe ser mayor a 0 m³.');
       return;
     }
 
     if (!form.ventanaInicio) {
-      setErrorLocal('Debe indicar la fecha y hora de inicio de la ventana de entrega.');
+      onInvalido('Debe indicar la fecha y hora de inicio de la ventana de entrega.');
       return;
     }
 
     if (!form.ventanaFin) {
-      setErrorLocal('Debe indicar la fecha y hora de término de la ventana de entrega.');
+      onInvalido('Debe indicar la fecha y hora de término de la ventana de entrega.');
       return;
     }
 
@@ -106,7 +107,7 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
     // Criterio de aceptación HU3.2:
     // "Dado un pedido cuya ventana de entrega termina antes de comenzar, cuando intento guardarlo, entonces el sistema rechaza el registro."
     if (fechaFin <= fechaInicio) {
-      setErrorLocal('La ventana de entrega termina antes de comenzar.');
+      onInvalido('La ventana de entrega termina antes de comenzar.');
       return;
     }
 
@@ -121,8 +122,8 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
         ventanaFin: form.ventanaFin,
         tipoMercaderia: form.tipoMercaderia,
       });
-    } catch (err) {
-      setErrorLocal(err instanceof Error ? err.message : 'Error al guardar el pedido');
+    } catch {
+      // La página ya mostró el error de la API; el formulario queda abierto para corregirlo.
     } finally {
       setGuardando(false);
     }
@@ -136,26 +137,8 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
       onClose={onClose}
       maxWidth="680px"
     >
-      <form onSubmit={handleSubmit} className="form-grid">
-        {errorLocal && (
-          <div
-            className="form-span-2"
-            style={{
-              padding: '0.75rem 1rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid var(--status-error)',
-              borderRadius: 'var(--radius-md)',
-              color: 'var(--status-error)',
-              fontSize: '0.875rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <AlertCircle size={16} style={{ flexShrink: 0 }} />
-            <span>{errorLocal}</span>
-          </div>
-        )}
+      {/* noValidate: sin las burbujas nativas del navegador; los errores van al toast. */}
+      <form noValidate onSubmit={handleSubmit} className="form-grid">
 
         {/* Cliente titular */}
         <div className="form-span-2">
@@ -203,7 +186,6 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
             className="form-control"
             value={form.idCentro}
             onChange={(e) => {
-              setErrorLocal(null);
               setForm((prev) => ({
                 ...prev,
                 idCentro: e.target.value ? Number(e.target.value) : '',
@@ -256,7 +238,6 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
             step="any"
             value={form.pesoKg}
             onChange={(e) => {
-              setErrorLocal(null);
               setForm((prev) => ({ ...prev, pesoKg: e.target.value }));
             }}
             disabled={guardando}
@@ -274,7 +255,6 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
             step="any"
             value={form.volumenM3}
             onChange={(e) => {
-              setErrorLocal(null);
               setForm((prev) => ({ ...prev, volumenM3: e.target.value }));
             }}
             disabled={guardando}
@@ -289,7 +269,6 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
             className="form-control"
             value={form.ventanaInicio}
             onChange={(e) => {
-              setErrorLocal(null);
               setForm((prev) => ({ ...prev, ventanaInicio: e.target.value }));
             }}
             disabled={guardando}
@@ -304,7 +283,6 @@ export const PedidoFormModal: React.FC<PedidoFormModalProps> = ({
             className="form-control"
             value={form.ventanaFin}
             onChange={(e) => {
-              setErrorLocal(null);
               setForm((prev) => ({ ...prev, ventanaFin: e.target.value }));
             }}
             disabled={guardando}

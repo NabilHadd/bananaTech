@@ -8,7 +8,7 @@ import type { EstadoConductor } from './types';
 const ESTADO_CONDUCTOR_TONE: Record<EstadoConductor, BadgeTone> = {
   DISPONIBLE: 'success',
   EN_VIAJE: 'warning',
-  EN_DESCANSO: 'neutral',
+  EN_DESCANSO: 'info',
   BLOQUEADO: 'error',
   INACTIVO: 'neutral',
 };

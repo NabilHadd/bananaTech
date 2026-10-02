@@ -6,8 +6,8 @@ import { ESTADO_CARGA_OPCIONES } from './cargas.constants';
 import type { CargaEstado } from './types';
 
 const ESTADO_CARGA_TONE: Record<CargaEstado, BadgeTone> = {
-  CREADA: 'warning',
-  CONFIRMADA: 'success',
+  CREADA: 'info',
+  CONFIRMADA: 'progress',
   EN_RUTA: 'warning',
   FINALIZADA: 'success',
   CANCELADA: 'neutral',

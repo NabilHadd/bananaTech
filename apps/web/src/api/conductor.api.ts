@@ -17,7 +17,7 @@ import type {
 } from '../components/features/conductores/types';
 
 // Campos de Conductor que piden el panel, la ficha y las mutations.
-const CONDUCTOR_CAMPOS = /* GraphQL */ `
+export const CONDUCTOR_CAMPOS = /* GraphQL */ `
   fragment ConductorCampos on Conductor {
     id
     rut

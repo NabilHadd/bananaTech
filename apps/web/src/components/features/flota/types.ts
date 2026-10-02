@@ -5,7 +5,7 @@
  * historial) los calcula el backend: el frontend sólo los muestra.
  */
 
-export type EstadoCamion = 'DISPONIBLE' | 'BLOQUEADO' | 'INACTIVO';
+export type EstadoCamion = 'DISPONIBLE' | 'EN_VIAJE' | 'BLOQUEADO' | 'INACTIVO';
 
 export type DocumentoTipo = 'RT' | 'PC' | 'SOAP' | 'PADRON' | 'CEC';
 

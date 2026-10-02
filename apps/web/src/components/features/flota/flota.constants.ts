@@ -5,6 +5,7 @@ import type { CamionFiltros, DocumentoTipo, EstadoCamion, ViajeEstado } from './
 
 export const ESTADO_CAMION_LABEL: Record<EstadoCamion, string> = {
   DISPONIBLE: 'Disponible',
+  EN_VIAJE: 'En viaje',
   BLOQUEADO: 'Bloqueado',
   INACTIVO: 'Inactivo',
 };
@@ -41,6 +42,7 @@ export const FILTROS_VACIOS: CamionFiltros = {
 export const ESTADO_OPCIONES: SelectOption[] = [
   { value: '', label: 'Todos los estados' },
   { value: 'DISPONIBLE', label: 'Disponible', sublabel: 'Habilitado para asignación' },
+  { value: 'EN_VIAJE', label: 'En viaje', sublabel: 'Con un viaje en curso' },
   { value: 'BLOQUEADO', label: 'Bloqueado', sublabel: 'Documentación vencida' },
   { value: 'INACTIVO', label: 'Inactivo', sublabel: 'Dado de baja' },
 ];

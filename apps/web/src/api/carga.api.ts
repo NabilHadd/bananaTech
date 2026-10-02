@@ -7,7 +7,7 @@ import { FILTROS_PEDIDOS_VACIOS } from '../components/features/pedidos/pedidos.c
 import type { Carga, CargaEstado, OcupacionCarga } from '../components/features/cargas/types';
 import type { Pedido } from '../components/features/pedidos/types';
 
-const CARGA_CAMPOS = /* GraphQL */ `
+export const CARGA_CAMPOS = /* GraphQL */ `
   fragment CargaCampos on Carga {
     id
     idCentro

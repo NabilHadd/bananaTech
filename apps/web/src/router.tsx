@@ -1,5 +1,5 @@
 import { Navigate, createBrowserRouter } from 'react-router';
-import { Boxes, Building2, Package, Truck, Users } from 'lucide-react';
+import { Boxes, Building2, Navigation, Package, Truck, Users } from 'lucide-react';
 import { AppLayout } from './components/common/AppLayout';
 import type { NavItem } from './components/common/TopBar';
 import { CargasPage } from './pages/CargasPage';
@@ -7,6 +7,7 @@ import { ClientesPage } from './pages/ClientesPage';
 import { ConductoresPage } from './pages/ConductoresPage';
 import { FlotaPage } from './pages/FlotaPage';
 import { PedidosPage } from './pages/PedidosPage';
+import { ViajesPage } from './pages/ViajesPage';
 
 // Pestañas del top-bar. Cada página nueva se agrega aquí y en `children`.
 const NAV_ITEMS: NavItem[] = [
@@ -15,6 +16,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/clientes', label: 'Clientes', icon: <Building2 size={16} /> },
   { to: '/pedidos', label: 'Pedidos', icon: <Package size={16} /> },
   { to: '/cargas', label: 'Cargas', icon: <Boxes size={16} /> },
+  { to: '/viajes', label: 'Viajes', icon: <Navigation size={16} /> },
 ];
 
 export const router = createBrowserRouter([
@@ -28,6 +30,7 @@ export const router = createBrowserRouter([
       { path: 'clientes', element: <ClientesPage /> },
       { path: 'pedidos', element: <PedidosPage /> },
       { path: 'cargas', element: <CargasPage /> },
+      { path: 'viajes', element: <ViajesPage /> },
       { path: '*', element: <Navigate to="/flota" replace /> },
     ],
   },

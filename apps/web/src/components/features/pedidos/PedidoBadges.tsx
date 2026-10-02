@@ -5,7 +5,7 @@ import type { BadgeTone } from '../../ui/Badge';
 import type { MercaderiaTipo, PedidoEstado } from './types';
 
 const ESTADO_PEDIDO_TONE: Record<PedidoEstado, BadgeTone> = {
-  CREADA: 'warning',
+  CREADA: 'info',
   TRANSITO: 'warning',
   ENTREGADO: 'success',
   CANCELADO: 'neutral',

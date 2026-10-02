@@ -50,7 +50,6 @@ export const PedidoTable: React.FC<PedidoTableProps> = ({
           </div>
           <div>
             <div style={strong}>#PED-{String(p.id).padStart(4, '0')}</div>
-            <div style={muted}>ID #{p.id}</div>
           </div>
         </div>
       ),
