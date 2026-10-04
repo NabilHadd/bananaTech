@@ -13,6 +13,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
     "ruff>=0.16.7",
 ]
 
@@ -28,3 +30,11 @@ extend-ignore = ["EXE002"]
 # Las comillas en Annotated[...] son obligatorias: strawberry.lazy resuelve el
 # tipo en tiempo de ejecución y la clase referenciada no está importada ahí.
 "app/*/types.py" = ["UP037"]
+# La base guarda fechas sin zona (ver app/core/tiempo.py); los datos de
+# prueba las imitan.
+"tests/*" = ["DTZ001"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
