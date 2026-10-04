@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import Index, text
 from sqlmodel import Field, Relationship, SQLModel
@@ -35,7 +36,22 @@ class Viaje(SQLModel, table=True):
     observacion: str | None = Field(default=None)
     # Se registra al cancelar el viaje (HU5.3); null si no se canceló.
     fecha_cancelacion: datetime | None = Field(default=None)
-    
+
+    # Costos y margen (H5.4). Las tarifas se copian de los parámetros al
+    # generar el viaje, para que cambiarlas después no altere viajes pasados.
+    precio_diesel_clp_litro: Decimal | None = Field(default=None, max_digits=10, decimal_places=2)
+    tarifa_peajes_clp_km: Decimal | None = Field(default=None, max_digits=10, decimal_places=4)
+    costo_operacion_clp_km: Decimal | None = Field(default=None, max_digits=10, decimal_places=4)
+    viatico_diario_clp: Decimal | None = Field(default=None, max_digits=10, decimal_places=2)
+    tarifa_venta_clp_ton_km: Decimal | None = Field(default=None, max_digits=10, decimal_places=4)
+    costo_diesel_clp: Decimal | None = Field(default=None, max_digits=14, decimal_places=2)
+    costo_peajes_clp: Decimal | None = Field(default=None, max_digits=14, decimal_places=2)
+    costo_operacion_clp: Decimal | None = Field(default=None, max_digits=14, decimal_places=2)
+    costo_viatico_clp: Decimal | None = Field(default=None, max_digits=14, decimal_places=2)
+    ingreso_total_clp: Decimal | None = Field(default=None, max_digits=14, decimal_places=2)
+    margen_clp: Decimal | None = Field(default=None, max_digits=14, decimal_places=2)
+    margen_porcentaje: Decimal | None = Field(default=None, max_digits=8, decimal_places=2)
+
     # Relationships for convenience
     conductor: Conductor | None = Relationship()
     camion: Camion | None = Relationship()

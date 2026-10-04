@@ -1,9 +1,11 @@
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from strawberry.fastapi import BaseContext
 
+from app.admin.repository import AdministracionRepository
+from app.admin.service import AdministracionService
 from app.cargas.repository import CargaRepository
 from app.cargas.service import CargasService
 from app.clientes.repository import CentroDistribucionRepository, ClienteRepository
@@ -14,7 +16,10 @@ from app.conductores.repository import (
     ViajeConductorRepository,
 )
 from app.conductores.service import ConductoresService
+from app.core.auth import authenticate_token
 from app.core.db import get_session
+from app.dashboard.repository import DashboardRepository
+from app.dashboard.service import DashboardService
 from app.flota.repository import (
     CamionRepository,
     TipoCamionRepository,
@@ -34,9 +39,10 @@ class Context(BaseContext):
     `response` y `background_tasks` (útiles para auth y cookies más adelante).
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, usuario) -> None:
         super().__init__()
         self.session = session
+        self.usuario = usuario
         # Service y repositorios comparten la sesión: un commit del service
         # confirma todo lo que hicieron los repositorios en este request.
         cliente_repo = ClienteRepository(session)
@@ -50,6 +56,8 @@ class Context(BaseContext):
         clase_licencia_repo = ClaseLicenciaRepository(session)
         cargas_repo = CargaRepository(session)
         viaje_repo = ViajeRepository(session)
+        administracion_repo = AdministracionRepository(session)
+        dashboard_repo = DashboardRepository(session)
 
         self.flota = FlotaService(
             session,
@@ -87,10 +95,18 @@ class Context(BaseContext):
             self.flota,
             self.conductores,
         )
+        self.administracion = AdministracionService(session, administracion_repo)
+        self.dashboard = DashboardService(session, dashboard_repo)
 
 
 async def build_context(
     session: Annotated[AsyncSession, Depends(get_session)],
+    request: Request,
 ) -> Context:
     """Aquí se arma el grafo de dependencias: una sesión por request."""
-    return Context(session)
+    authorization = request.headers.get("Authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Debes iniciar sesión.")
+    usuario = await authenticate_token(session, token)
+    return Context(session, usuario)

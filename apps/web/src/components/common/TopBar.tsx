@@ -1,18 +1,22 @@
 import React from 'react';
 import { NavLink } from 'react-router';
-import { Truck } from 'lucide-react';
+import { LogOut, Truck } from 'lucide-react';
 
 export interface NavItem {
   to: string;
   label: string;
   icon?: React.ReactNode;
+  adminOnly?: boolean;
 }
 
 interface TopBarProps {
   items: NavItem[];
+  username: string;
+  role: string;
+  onLogout: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ items }) => (
+export const TopBar: React.FC<TopBarProps> = ({ items, username, role, onLogout }) => (
   <header className="topbar">
     <div className="page-container topbar-inner">
       <div className="topbar-brand">
@@ -37,6 +41,12 @@ export const TopBar: React.FC<TopBarProps> = ({ items }) => (
           </NavLink>
         ))}
       </nav>
+      <div className="topbar-account">
+        <span>{username} <small>{role === 'ADMINISTRADOR' ? 'Administrador' : 'Planificador'}</small></span>
+        <button className="topbar-logout" type="button" onClick={onLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
+          <LogOut size={16} />
+        </button>
+      </div>
     </div>
   </header>
 );

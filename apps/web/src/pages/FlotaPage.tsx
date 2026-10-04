@@ -12,6 +12,7 @@ import {
 } from '../api/camion.api';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../components/ui/useToast';
@@ -188,19 +189,12 @@ export const FlotaPage: React.FC = () => {
     <div className="page-view-enter stack-lg">
       <Toast message={toast} />
 
-      <div className="page-header">
-        <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Truck color="var(--accent-primary)" /> Flota
-          </h1>
-          <p className="text-muted">
-            Inventario de camiones con filtros combinables, ficha técnica, documentos e historial de viajes
-          </p>
-        </div>
-        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear' })}>
-          Registrar camión
-        </Button>
-      </div>
+      <PageHeader
+        title="Flota"
+        icon={<Truck size={22} />}
+        description="Inventario de camiones con filtros combinables, ficha técnica, documentos e historial de viajes"
+        actions={<Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear' })}>Registrar camión</Button>}
+      />
 
       <CamionFilters
         filtros={filtros}

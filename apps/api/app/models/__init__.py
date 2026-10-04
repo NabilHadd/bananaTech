@@ -19,6 +19,7 @@ from app.models.pedido import (
     PedidoCarga,
     PedidoEstado,
 )
+from app.models.seguridad import Parametro, ParametroAuditoria, Usuario
 from app.models.viaje import Viaje
 
 __all__ = [
@@ -37,9 +38,12 @@ __all__ = [
     "LicenciaClase",
     "LicenciaClaseLink",
     "MercaderiaTipo",
+    "Parametro",
+    "ParametroAuditoria",
     "Pedido",
     "PedidoCarga",
     "PedidoEstado",
     "TipoCamion",
+    "Usuario",
     "Viaje",
 ]

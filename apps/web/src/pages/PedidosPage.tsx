@@ -6,6 +6,7 @@ import {
   getPedidos,
 } from '../api/pedido.api';
 import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../components/ui/useToast';
@@ -120,23 +121,12 @@ export const PedidosPage: React.FC = () => {
     <div className="page-view-enter stack-lg">
       <Toast message={toast} />
 
-      <div className="page-header">
-        <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Package color="var(--accent-primary)" /> Pedidos
-          </h1>
-          <p className="text-muted">
-            Listado y priorización de pedidos para planificación de transporte
-          </p>
-        </div>
-        <Button
-          variant="primary"
-          icon={<Plus size={16} />}
-          onClick={() => setModalAbierto(true)}
-        >
-          Crear pedido
-        </Button>
-      </div>
+      <PageHeader
+        title="Pedidos"
+        icon={<Package size={22} />}
+        description="Listado y priorización de pedidos para planificación de transporte"
+        actions={<Button variant="primary" icon={<Plus size={16} />} onClick={() => setModalAbierto(true)}>Crear pedido</Button>}
+      />
 
       <PedidoFilters
         filtros={filtros}

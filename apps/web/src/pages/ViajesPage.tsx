@@ -1,20 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { FilterX, LoaderCircle, Navigation, Plus, WifiOff } from 'lucide-react';
+import { Navigation, Plus } from 'lucide-react';
 import { getCargas } from '../api/carga.api';
 import { agregarViaje, cancelarViaje, finalizarViaje, getViajes } from '../api/viaje.api';
-import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/ui/Button';
-import { Select } from '../components/ui/Select';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../components/ui/useToast';
 import type { Carga } from '../components/features/cargas/types';
 import type { ViajeEstado } from '../components/features/flota/types';
 import { GenerarViajeModal } from '../components/features/viajes/GenerarViajeModal';
 import { ViajeDetalleModal } from '../components/features/viajes/ViajeDetalleModal';
+import { ViajesEmptyState } from '../components/features/viajes/ViajesEmptyState';
+import { ViajesFilterBar } from '../components/features/viajes/ViajesFilterBar';
 import { ViajeTable } from '../components/features/viajes/ViajeTable';
 import type { LlegadaInput, Viaje, ViajeInput } from '../components/features/viajes/types';
-import { codigoViaje, ESTADO_VIAJE_OPCIONES } from '../components/features/viajes/viajes.constants';
+import { codigoViaje } from '../components/features/viajes/viajes.constants';
 
 const esCancelacion = (error: unknown) =>
   error instanceof DOMException && error.name === 'AbortError';
@@ -43,11 +44,25 @@ export const ViajesPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [confirmadas, setConfirmadas] = useState<Carga[] | null>(null);
+  const [versionGeneracion, setVersionGeneracion] = useState(0);
+  const [resultadoConfirmadas, setResultadoConfirmadas] = useState<{
+    version: number;
+    cargas: Carga[];
+  } | null>(null);
+  const confirmadas = resultadoConfirmadas?.version === versionGeneracion
+    ? resultadoConfirmadas.cargas
+    : null;
 
   // Cada acción que modifica datos incrementa `version` para refrescar.
   const [version, setVersion] = useState(0);
-  const recargar = useCallback(() => setVersion((v) => v + 1), []);
+  const recargar = useCallback(() => {
+    setCargando(true);
+    setVersion((v) => v + 1);
+  }, []);
+  const cambiarEstado = (nuevoEstado: ViajeEstado | '') => {
+    setCargando(true);
+    setEstado(nuevoEstado);
+  };
 
   // Total sin filtros, para el "Mostrando X de N viajes".
   useEffect(() => {
@@ -60,7 +75,6 @@ export const ViajesPage: React.FC = () => {
 
   useEffect(() => {
     const control = new AbortController();
-    setCargando(true);
     getViajes(estado, control.signal)
       .then((data) => {
         setViajes(data);
@@ -74,17 +88,22 @@ export const ViajesPage: React.FC = () => {
   // Las cargas que pueden salir: se piden al abrir el modal, para que estén al día.
   useEffect(() => {
     if (!generando) return;
+    const version = versionGeneracion;
     const control = new AbortController();
-    setConfirmadas(null);
     getCargas('CONFIRMADA', control.signal)
-      .then(setConfirmadas)
+      .then((cargas) => setResultadoConfirmadas({ version, cargas }))
       .catch((e) => {
         if (esCancelacion(e)) return;
         showToast(mensajeDe(e), 'error');
         setGenerando(false);
       });
     return () => control.abort();
-  }, [generando, showToast]);
+  }, [generando, versionGeneracion, showToast]);
+
+  const abrirGenerar = () => {
+    setVersionGeneracion((version) => version + 1);
+    setGenerando(true);
+  };
 
   const cerrarGenerar = () => {
     setGenerando(false);
@@ -115,71 +134,30 @@ export const ViajesPage: React.FC = () => {
     }
   };
 
-  const tablaVacia = error ? (
-    <EmptyState
-      icon={<WifiOff size={36} />}
-      title="No se pudo cargar los viajes"
-      description={error}
-      action={<Button onClick={recargar}>Reintentar</Button>}
-    />
-  ) : cargando ? (
-    <EmptyState icon={<LoaderCircle size={36} />} title="Cargando viajes..." />
-  ) : estado ? (
-    <EmptyState
-      icon={<FilterX size={36} />}
-      title="Ningún viaje está en ese estado"
-      action={<Button onClick={() => setEstado('')}>Ver todos</Button>}
-    />
-  ) : (
-    <EmptyState
-      icon={<Navigation size={36} />}
-      title="Aún no hay viajes"
-      description="Genere un viaje para una carga Confirmada: el sistema propone camión y conductor, o puede elegirlos usted."
-      action={<Button variant="primary" icon={<Plus size={16} />} onClick={() => setGenerando(true)}>Generar viaje</Button>}
-    />
-  );
-
   return (
     <div className="page-view-enter stack-lg">
       <Toast message={toast} />
 
-      <div className="page-header">
-        <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Navigation color="var(--accent-primary)" /> Viajes
-          </h1>
-          <p className="text-muted">
-            Asignación de camión y conductor a las cargas Confirmadas y seguimiento de los viajes
-          </p>
-        </div>
-        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setGenerando(true)}>
-          Generar viaje
-        </Button>
-      </div>
+      <PageHeader
+        title="Viajes"
+        icon={<Navigation size={22} />}
+        description="Asignación de camión y conductor a las cargas Confirmadas y seguimiento de los viajes"
+        actions={<Button variant="primary" icon={<Plus size={16} />} onClick={abrirGenerar}>Generar viaje</Button>}
+      />
 
-      <div className="glass-panel filters-panel">
-        <div className="filters-row">
-          <div className="filters-controls">
-            <Select
-              label="Estado"
-              value={estado}
-              options={ESTADO_VIAJE_OPCIONES}
-              highlighted={estado !== ''}
-              onChange={(v) => setEstado(v as ViajeEstado | '')}
-              minWidth="200px"
-            />
-          </div>
-        </div>
-        <div className="filters-summary">
-          <span style={{ color: 'var(--text-tertiary)' }}>
-            Mostrando <strong style={{ color: 'var(--text-primary)' }}>{error ? 0 : viajes.length}</strong> de{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>{total}</strong> viajes
-          </span>
-        </div>
-      </div>
+      <ViajesFilterBar estado={estado} visibles={error ? 0 : viajes.length} total={total} onEstadoChange={cambiarEstado} />
 
       <div className="glass-panel" style={{ padding: '1.5rem' }}>
-        <ViajeTable viajes={error ? [] : viajes} onSelect={setSeleccionado} empty={tablaVacia} />
+        <ViajeTable viajes={error ? [] : viajes} onSelect={setSeleccionado} empty={
+          <ViajesEmptyState
+            error={error}
+            loading={cargando}
+            estado={estado}
+            onRetry={recargar}
+            onClearFilter={() => cambiarEstado('')}
+            onCreate={abrirGenerar}
+          />
+        } />
       </div>
 
       {generando && confirmadas && (

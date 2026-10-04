@@ -1,4 +1,4 @@
-"""Reglas de negocio de los viajes (HU5.1).
+"""Reglas de negocio de los viajes (HU5.1–5.4).
 
 Un viaje une una carga Confirmada con un camión y un conductor. Se genera y
 arranca en el mismo paso, sin estado "Planificado": la carga pasa a En ruta y
@@ -9,6 +9,9 @@ Camión y conductor se limitan entre sí: la carga decide qué camiones sirven
 (licencia, RN-04). Las consultas aceptan la otra mitad del par ya elegida para
 que el front pueda armar el viaje empezando por cualquiera de las dos, y sin
 ella sólo devuelven opciones que tengan al menos una pareja posible.
+
+Al generarse, el viaje copia las tarifas vigentes y estima sus costos; al
+finalizar, calcula el ingreso y el margen (H5.4).
 
 No conoce GraphQL: recibe y devuelve objetos de Python. Es la única capa que
 hace commit, así que cada método público es una operación completa.
@@ -31,6 +34,7 @@ from app.conductores.service import (
 )
 from app.core import tiempo
 from app.core.errors import DomainError
+from app.core.parameters import leer_parametro
 from app.flota.service import (
     CamionEvaluado,
     EstadoCamion,
@@ -39,7 +43,23 @@ from app.flota.service import (
     estado_viaje,
 )
 from app.models import Camion, Carga, CargaEstado, Viaje
+from app.viajes.economia import (
+    CostosEstimados,
+    calcular_ingreso,
+    calcular_margen,
+    estimar_costos,
+)
 from app.viajes.repository import ViajeRepository
+
+# Parámetros (HU7.2) que el viaje copia al generarse: cambiarlos después no
+# altera los costos de viajes ya generados.
+TARIFAS = (
+    "precio_diesel_clp_litro",
+    "tarifa_peajes_clp_km",
+    "costo_operacion_clp_km",
+    "viatico_diario_clp",
+    "tarifa_venta_clp_ton_km",
+)
 
 # ── Datos de entrada ─────────────────────────────────────────────────────────
 
@@ -241,6 +261,7 @@ class ViajesService:
             fecha_inicio=inicio,
             fecha_fin=fin,
         )
+        await self._costear(viaje, camion, carga)
         self.viajes.agregar(viaje)
         self.cargas.al_iniciar_viaje(carga)
         try:
@@ -256,7 +277,7 @@ class ViajesService:
         """Registra la llegada (HU5.2): la carga queda Finalizada y sus pedidos Entregado.
 
         El camión suma al odómetro la distancia al centro, y el descanso del
-        conductor corre desde la llegada.
+        conductor corre desde la llegada. Queda calculado el margen (H5.4).
         """
         viaje = await self._viaje_en_ruta(id)
         receptor = datos.receptor.strip()
@@ -270,6 +291,22 @@ class ViajesService:
         viaje.fecha_llegada = datos.fecha_llegada
         viaje.receptor = receptor
         viaje.observacion = (datos.observacion or "").strip() or None
+        if viaje.costo_diesel_clp is None or viaje.costo_viatico_clp is None:
+            # Viaje generado antes de H5.4: se costea con las tarifas de hoy.
+            await self._costear(viaje, viaje.camion, viaje.carga)
+        peso, _ = totales(viaje.carga.pedidos)
+        viaje.ingreso_total_clp = calcular_ingreso(
+            peso, viaje.carga.centro.distancia_km, viaje.tarifa_venta_clp_ton_km
+        )
+        viaje.margen_clp, viaje.margen_porcentaje = calcular_margen(
+            viaje.ingreso_total_clp,
+            CostosEstimados(
+                viaje.costo_diesel_clp,
+                viaje.costo_peajes_clp,
+                viaje.costo_operacion_clp,
+                viaje.costo_viatico_clp,
+            ),
+        )
         self.cargas.al_finalizar_viaje(viaje.carga)
         km = viaje.carga.centro.distancia_km.quantize(Decimal(1), ROUND_HALF_UP)
         viaje.camion.kilometraje_actual += int(km)
@@ -362,6 +399,27 @@ class ViajesService:
         conductor = await self.conductores.obtener_conductor(viaje.id_conductor)
         assert camion is not None and conductor is not None  # FKs de viaje.
         return ViajeDetalle(viaje, camion, conductor)
+
+    async def _costear(self, viaje: Viaje, camion: Camion, carga: Carga) -> None:
+        """Copia al viaje las tarifas que le falten y estima sus costos (H5.4)."""
+        for clave in TARIFAS:
+            if getattr(viaje, clave) is None:
+                setattr(viaje, clave, await leer_parametro(self.session, clave))
+        # Cada día calendario que toca el viaje cuenta un viático.
+        dias = (viaje.fecha_fin.date() - viaje.fecha_inicio.date()).days + 1
+        costos = estimar_costos(
+            carga.centro.distancia_km,
+            camion.rendimiento_base_km_l,
+            viaje.precio_diesel_clp_litro,
+            viaje.tarifa_peajes_clp_km,
+            viaje.costo_operacion_clp_km,
+            viaje.viatico_diario_clp,
+            dias,
+        )
+        viaje.costo_diesel_clp = costos.costo_diesel_clp
+        viaje.costo_peajes_clp = costos.costo_peajes_clp
+        viaje.costo_operacion_clp = costos.costo_operacion_clp
+        viaje.costo_viatico_clp = costos.costo_viatico_clp
 
     @staticmethod
     def _horario(carga: Carga) -> tuple[datetime, datetime]:

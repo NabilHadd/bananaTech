@@ -7,6 +7,7 @@ import {
   registrarCliente,
 } from '../api/cliente.api';
 import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../components/ui/useToast';
@@ -49,7 +50,14 @@ export const ClientesPage: React.FC = () => {
 
   // Cada acción que modifica datos incrementa `version` para refrescar.
   const [version, setVersion] = useState(0);
-  const recargar = useCallback(() => setVersion((v) => v + 1), []);
+  const recargar = useCallback(() => {
+    setCargando(true);
+    setVersion((v) => v + 1);
+  }, []);
+  const cambiarFiltros = (nuevosFiltros: ClienteFiltros) => {
+    setCargando(true);
+    setFiltros(nuevosFiltros);
+  };
 
   // Total sin filtros, para el "Mostrando X de N clientes".
   useEffect(() => {
@@ -64,7 +72,6 @@ export const ClientesPage: React.FC = () => {
   useEffect(() => {
     const control = new AbortController();
     const timer = window.setTimeout(() => {
-      setCargando(true);
       getClientes(filtros, control.signal)
         .then((data) => {
           setClientes(data);
@@ -82,10 +89,7 @@ export const ClientesPage: React.FC = () => {
 
   // Carga de la ficha si está seleccionada
   useEffect(() => {
-    if (fichaId === null) {
-      setFicha(null);
-      return;
-    }
+      if (fichaId === null) return;
     const control = new AbortController();
     getCliente(fichaId, control.signal)
       .then((data) => setFicha(data))
@@ -97,6 +101,8 @@ export const ClientesPage: React.FC = () => {
       });
     return () => control.abort();
   }, [fichaId, version, showToast]);
+
+    const fichaActual = ficha?.id === fichaId ? ficha : null;
 
   const handleSubmit = async (input: ClienteInput) => {
     if (!formulario) return;
@@ -128,7 +134,7 @@ export const ClientesPage: React.FC = () => {
     <EmptyState
       icon={<FilterX size={36} />}
       title="Ningún cliente cumple con los filtros seleccionados"
-      action={<Button onClick={() => setFiltros(FILTROS_CLIENTES_VACIOS)}>Limpiar filtros</Button>}
+      action={<Button onClick={() => cambiarFiltros(FILTROS_CLIENTES_VACIOS)}>Limpiar filtros</Button>}
     />
   );
 
@@ -136,28 +142,17 @@ export const ClientesPage: React.FC = () => {
     <div className="page-view-enter stack-lg">
       <Toast message={toast} />
 
-      <div className="page-header">
-        <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Building2 color="var(--accent-primary)" /> Clientes
-          </h1>
-          <p className="text-muted">
-            Administración de clientes, direcciones y centros de distribución
-          </p>
-        </div>
-        <Button
-          variant="primary"
-          icon={<Plus size={16} />}
-          onClick={() => setFormulario({ modo: 'crear' })}
-        >
-          Registrar cliente
-        </Button>
-      </div>
+      <PageHeader
+        title="Clientes"
+        icon={<Building2 size={22} />}
+        description="Administración de clientes, direcciones y centros de distribución"
+        actions={<Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear' })}>Registrar cliente</Button>}
+      />
 
       <ClienteFilters
         filtros={filtros}
-        onChange={setFiltros}
-        onReset={() => setFiltros(FILTROS_CLIENTES_VACIOS)}
+        onChange={cambiarFiltros}
+        onReset={() => cambiarFiltros(FILTROS_CLIENTES_VACIOS)}
         visibles={error ? 0 : clientes.length}
         total={total}
       />
@@ -172,12 +167,12 @@ export const ClientesPage: React.FC = () => {
       </div>
 
       {/* Ficha del cliente */}
-      {ficha && (
+      {fichaActual && (
         <ClienteDetailModal
-          cliente={ficha}
+          cliente={fichaActual}
           onClose={() => setFichaId(null)}
           onEditar={() => {
-            const clienteAEditar = ficha;
+            const clienteAEditar = fichaActual;
             setFichaId(null);
             setFormulario({ modo: 'editar', cliente: clienteAEditar });
           }}
