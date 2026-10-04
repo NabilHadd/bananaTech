@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     app_name: str = "bananaTech API"
     debug: bool = True
     # Origen del frontend de Vite, necesario para CORS en producción
-    cors_origins: list[str] = ["http://localhost:5174", "http://localhost:5173"]
+    cors_origins: list[str] = ["http://localhost:5174", "http://localhost:5173", "https://nabilhadd.github.io"]
     # URL de conexión a la base de datos PostgreSQL
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/erp"
     auth_secret: str = "development-only-change-me"
