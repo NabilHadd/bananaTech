@@ -1,38 +1,26 @@
-name: bananatech
+# Despliegue en Azure: sólo la API. La base es un PostgreSQL externo
+# (no un contenedor), así que no hay servicio "db" ni volúmenes de datos.
+#
+#   docker compose build    # construye y etiqueta la imagen
+#   docker compose push     # la sube a Docker Hub
+#   docker compose up       # la prueba en local contra la base externa
+#
+# Otro nombre de proyecto para no chocar con el entorno de desarrollo de main.
+name: bananatech-azure
 
 services:
-  db:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      # 5432 del host suele estar tomado por un Postgres local: se expone en 5433.
-      - "${POSTGRES_PORT:-5433}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      # La API espera a que esto pase antes de arrancar.
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
   api:
     build: ./apps/api
+    image: nabilhadd/b-tnc:latest
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      # Dentro de la red de compose el host de la base es "db", no "localhost",
-      # y el puerto es el 5432 interno (no el mapeado al host).
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      DEBUG: ${DEBUG:-true}
-      AUTH_SECRET: ${AUTH_SECRET:-development-only-change-me}
+      # Se define en .env; apunta a la base externa. Con Azure Database for
+      # PostgreSQL, asyncpg necesita TLS: agregar ?ssl=require al final.
+      DATABASE_URL: ${AZURE_DATABASE_URL:?Define AZURE_DATABASE_URL en .env}
+      DEBUG: ${DEBUG:-false}
+      # Con DEBUG=false la API no arranca si AUTH_SECRET es el de ejemplo o
+      # tiene menos de 32 caracteres.
+      AUTH_SECRET: ${AUTH_SECRET:?Define AUTH_SECRET en .env}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       PRECIO_DIESEL_CLP_LITRO: ${PRECIO_DIESEL_CLP_LITRO:-1300}
@@ -43,12 +31,6 @@ services:
       DESCANSO_MINIMO_HORAS: ${DESCANSO_MINIMO_HORAS:-8}
     ports:
       - "${API_PORT:-8000}:8000"
-    volumes:
-      # Código montado desde el host para que --reload funcione.
-      - ./apps/api:/app
-      # Volumen anónimo: evita que el .venv del host pise el de la imagen.
-      - /app/.venv
-    command: uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-volumes:
-  postgres_data:
+    # Sin bind mount ni --reload: corre el código copiado en la imagen, igual
+    # que en Azure.
+    command: uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port 8000
