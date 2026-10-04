@@ -8,7 +8,7 @@ Desde ahí la mueve el viaje (E05): En ruta al generarse, Finalizada al llegar.
 
 from dataclasses import dataclass
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from itertools import combinations
 
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -28,7 +28,7 @@ INCOMPATIBLES: dict[frozenset[MercaderiaTipo], str] = {
 }
 
 
-class FactorLimitante(str, Enum):
+class FactorLimitante(StrEnum):
     PESO = "Peso"
     VOLUMEN = "Volumen"
 

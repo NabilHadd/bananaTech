@@ -77,16 +77,19 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
 
   // Se recalcula al cambiar de camión o cuando la carga gana o pierde pedidos (HU4.3).
   useEffect(() => {
-    if (!idCamion) {
-      setOcupacion(null);
-      return;
-    }
+      if (!idCamion) return;
     const control = new AbortController();
     getOcupacionCarga(carga.id, Number(idCamion), control.signal)
       .then(setOcupacion)
       .catch(() => undefined);
     return () => control.abort();
   }, [idCamion, carga]);
+
+    const ocupacionActual = ocupacion?.idCamion === Number(idCamion) ? ocupacion : null;
+    const cambiarCamion = (nuevoId: string) => {
+      setOcupacion(null);
+      setIdCamion(nuevoId);
+    };
 
   const ejecutar = async (accion: () => Promise<void>) => {
     setErrorLocal(null);
@@ -277,11 +280,11 @@ export const CargaDetalleModal: React.FC<CargaDetalleModalProps> = ({
                       sublabel: `${c.tipo} · ${formatearNumero(c.pesoMaxKg)} kg · ${formatearNumero(c.volumenMaxM3)} m³`,
                     })),
                   ]}
-                  onChange={setIdCamion}
+                  onChange={cambiarCamion}
                   minWidth="240px"
                 />
               </div>
-              {ocupacion && <OcupacionPanel ocupacion={ocupacion} />}
+              {ocupacionActual && <OcupacionPanel ocupacion={ocupacionActual} />}
             </>
           )}
         </div>

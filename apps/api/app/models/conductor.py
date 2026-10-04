@@ -1,14 +1,14 @@
 from datetime import datetime
-from enum import Enum
-from typing import TYPE_CHECKING, Optional, List
+from enum import StrEnum
+from typing import TYPE_CHECKING
 
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from app.models.camion import TipoCamion
 
 
-class LicenciaClase(str, Enum):
+class LicenciaClase(StrEnum):
     A1 = "A1"
     A2 = "A2"
     A3 = "A3"
@@ -48,7 +48,7 @@ class ClaseLicenciaTipoCamion(SQLModel, table=True):
 
 
 class Conductor(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     rut: str = Field(unique=True)
     nombres: str
     apellidos: str
@@ -56,19 +56,19 @@ class Conductor(SQLModel, table=True):
     email: str
     activo: bool = Field(default=True, description="Indicador de baja lógica (RNF-06)")
 
-    licencias: List["Licencia"] = Relationship(back_populates="conductor")
+    licencias: list[Licencia] = Relationship(back_populates="conductor")
 
 
 class Licencia(SQLModel, table=True):
     """Histórico de licencias de un conductor: sólo una vigente a la vez."""
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     id_conductor: int = Field(foreign_key="conductor.id")
     fecha_emision: datetime
     fecha_vencimiento: datetime
 
-    conductor: Optional[Conductor] = Relationship(back_populates="licencias")
-    clases: List["ClaseLicencia"] = Relationship(
+    conductor: Conductor | None = Relationship(back_populates="licencias")
+    clases: list[ClaseLicencia] = Relationship(
         back_populates="licencias",
         link_model=LicenciaClaseLink,
     )
@@ -79,15 +79,15 @@ class ClaseLicencia(SQLModel, table=True):
 
     __tablename__ = "clase_licencia"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     clase: LicenciaClase = Field(unique=True, description="Letra de la clase")
-    descripcion: Optional[str] = Field(default=None)
+    descripcion: str | None = Field(default=None)
 
-    licencias: List[Licencia] = Relationship(
+    licencias: list[Licencia] = Relationship(
         back_populates="clases",
         link_model=LicenciaClaseLink,
     )
-    tipos_camion: List["TipoCamion"] = Relationship(
+    tipos_camion: list[TipoCamion] = Relationship(
         back_populates="clases_licencia",
         link_model=ClaseLicenciaTipoCamion,
     )

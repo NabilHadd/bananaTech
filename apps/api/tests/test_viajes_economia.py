@@ -5,6 +5,17 @@ from app.viajes.economia import calcular_ingreso, calcular_margen, estimar_costo
 
 
 class EconomiaViajeTests(unittest.TestCase):
+	def test_viatico_se_suma_al_costo_y_reduce_el_margen(self) -> None:
+		costos = estimar_costos(
+			Decimal(400), Decimal(3), Decimal(1300), Decimal(50), Decimal(300),
+			Decimal(15000), 2,
+		)
+		margen, porcentaje = calcular_margen(Decimal(400000), costos)
+
+		self.assertEqual(costos.costo_viatico_clp, Decimal(30000))
+		self.assertEqual(margen, Decimal(56667))
+		self.assertEqual(porcentaje, Decimal("14.17"))
+
 	def test_calcula_ingreso_costos_y_margen_en_clp(self) -> None:
 		costos = estimar_costos(
 			Decimal(400),

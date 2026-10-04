@@ -19,8 +19,8 @@ from app.conductores.repository import (
     ViajeConductorRepository,
 )
 from app.core import tiempo
-from app.core.config import get_settings
 from app.core.errors import DomainError
+from app.core.parameters import leer_parametro
 from app.flota.service import ORIGEN_VIAJES, EstadoViaje, estado_viaje
 from app.models import ClaseLicencia, Conductor, Licencia, LicenciaClase, Viaje
 
@@ -315,7 +315,8 @@ class ConductoresService:
         self, conductores: list[Conductor]
     ) -> list[ConductorEvaluado]:
         ahora = tiempo.ahora()
-        descanso = timedelta(hours=get_settings().descanso_minimo_horas)
+        horas_descanso = await leer_parametro(self.session, "descanso_minimo_horas")
+        descanso = timedelta(hours=float(horas_descanso))
         viajes = await self.viajes.listar_recientes(ahora - descanso)
         por_conductor: dict[int, list[Viaje]] = {}
         for v in viajes:

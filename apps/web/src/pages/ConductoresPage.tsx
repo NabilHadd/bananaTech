@@ -13,6 +13,7 @@ import {
 } from '../api/conductor.api';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Toast } from '../components/ui/Toast';
 import { useToast } from '../components/ui/useToast';
@@ -195,19 +196,12 @@ export const ConductoresPage: React.FC = () => {
     <div className="page-view-enter stack-lg">
       <Toast message={toast} />
 
-      <div className="page-header">
-        <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Users color="var(--accent-primary)" /> Conductores
-          </h1>
-          <p className="text-muted">
-            Panel de personal con disponibilidad, licencias habilitantes e historial de viajes
-          </p>
-        </div>
-        <Button variant="primary" icon={<UserPlus size={16} />} onClick={() => setFormulario({ modo: 'crear' })}>
-          Registrar conductor
-        </Button>
-      </div>
+      <PageHeader
+        title="Conductores"
+        icon={<Users size={22} />}
+        description="Panel de personal con disponibilidad, licencias habilitantes e historial de viajes"
+        actions={<Button variant="primary" icon={<UserPlus size={16} />} onClick={() => setFormulario({ modo: 'crear' })}>Registrar conductor</Button>}
+      />
 
       <ResumenPersonalPanel resumen={resumen} />
 

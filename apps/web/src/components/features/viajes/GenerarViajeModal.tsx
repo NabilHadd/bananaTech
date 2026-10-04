@@ -48,32 +48,43 @@ export const GenerarViajeModal: React.FC<GenerarViajeModalProps> = ({ cargas, id
   // tomar el camión o el conductor mientras el modal estaba abierto.
   const [intento, setIntento] = useState(0);
 
-  const [propuesta, setPropuesta] = useState<PropuestaViaje | null>(null);
-  const [sinPropuesta, setSinPropuesta] = useState<string | null>(null);
-  const [proponiendo, setProponiendo] = useState(false);
+  const [resultadoPropuesta, setResultadoPropuesta] = useState<{
+    clave: string;
+    propuesta?: PropuestaViaje;
+    error?: string;
+  } | null>(null);
 
   const [idCamion, setIdCamion] = useState('');
   const [idConductor, setIdConductor] = useState('');
   // null mientras no llega la lista, para no mostrar "ninguno" antes de tiempo.
   const [camiones, setCamiones] = useState<Camion[] | null>(null);
   const [conductores, setConductores] = useState<Conductor[] | null>(null);
-  const [ocupacion, setOcupacion] = useState<OcupacionCarga | null>(null);
+  const [resultadoOcupacion, setResultadoOcupacion] = useState<{
+    clave: string;
+    ocupacion: OcupacionCarga;
+  } | null>(null);
 
   const carga = cargas.find((c) => String(c.id) === idCarga) ?? null;
+  const clavePropuesta = `${idCarga}:${modo}:${intento}`;
+  const propuestaActual = resultadoPropuesta?.clave === clavePropuesta ? resultadoPropuesta : null;
+  const propuesta = propuestaActual?.propuesta ?? null;
+  const sinPropuesta = propuestaActual?.error ?? null;
+  const proponiendo = Boolean(idCarga) && modo === 'automatico' && propuestaActual === null;
+  const claveOcupacion = `${idCarga}:${idCamion}:${modo}`;
+  const ocupacion = resultadoOcupacion?.clave === claveOcupacion
+    ? resultadoOcupacion.ocupacion
+    : null;
 
   // Automático: el motor propone camión y conductor, o explica por qué no puede.
   useEffect(() => {
-    setPropuesta(null);
-    setSinPropuesta(null);
     if (!idCarga || modo !== 'automatico') return;
+    const clave = clavePropuesta;
     const control = new AbortController();
-    setProponiendo(true);
     proponerViaje(Number(idCarga), control.signal)
-      .then(setPropuesta)
-      .catch((e) => !esCancelacion(e) && setSinPropuesta(mensajeDe(e)))
-      .finally(() => !control.signal.aborted && setProponiendo(false));
+      .then((value) => setResultadoPropuesta({ clave, propuesta: value }))
+      .catch((e) => !esCancelacion(e) && setResultadoPropuesta({ clave, error: mensajeDe(e) }));
     return () => control.abort();
-  }, [idCarga, modo, intento]);
+  }, [idCarga, modo, intento, clavePropuesta]);
 
   // Manual: cada lista se filtra por lo elegido en la otra. Si lo elegido deja
   // de estar en su lista (p. ej. tras un rechazo), se deselecciona.
@@ -102,14 +113,19 @@ export const GenerarViajeModal: React.FC<GenerarViajeModalProps> = ({ cargas, id
   }, [idCarga, idCamion, modo, intento]);
 
   useEffect(() => {
-    setOcupacion(null);
     if (!idCarga || !idCamion || modo !== 'manual') return;
+    const clave = claveOcupacion;
     const control = new AbortController();
     getOcupacionCarga(Number(idCarga), Number(idCamion), control.signal)
-      .then(setOcupacion)
+      .then((value) => setResultadoOcupacion({ clave, ocupacion: value }))
       .catch(() => undefined);
     return () => control.abort();
-  }, [idCarga, idCamion, modo]);
+  }, [idCarga, idCamion, modo, claveOcupacion]);
+
+  const cambiarModo = (nuevoModo: Modo) => {
+    setModo(nuevoModo);
+    setIntento((current) => current + 1);
+  };
 
   const cambiarCarga = (valor: string) => {
     setIdCarga(valor);
@@ -167,7 +183,7 @@ export const GenerarViajeModal: React.FC<GenerarViajeModalProps> = ({ cargas, id
       onClose={onClose}
       maxWidth="760px"
       preventCloseOnBackdrop={procesando}
-      header={cargas.length > 0 && <Tabs items={pestanas} active={modo} onChange={setModo} />}
+      header={cargas.length > 0 && <Tabs items={pestanas} active={modo} onChange={cambiarModo} />}
       footer={
         cargas.length > 0 && (
           <>

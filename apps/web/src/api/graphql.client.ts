@@ -1,3 +1,5 @@
+import { clearAuthSession, getAuthSession } from './auth';
+
 /**
  * Cliente GraphQL compartido.
  *
@@ -42,7 +44,10 @@ export async function graphqlRequest<TData>(
   try {
     response = await fetch(GRAPHQL_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(getAuthSession() ? { Authorization: `Bearer ${getAuthSession()!.token}` } : {}),
+      },
       body: JSON.stringify({ query, variables }),
       signal,
     });
@@ -50,6 +55,11 @@ export async function graphqlRequest<TData>(
     // Una petición cancelada no es un error que haya que mostrar.
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
     throw new ApiError('No se pudo conectar con la API');
+  }
+
+  if (response.status === 401) {
+    clearAuthSession();
+    window.dispatchEvent(new Event('auth-expired'));
   }
 
   let body: GraphQLResponse<TData>;

@@ -41,10 +41,12 @@ class ViajeType:
     precio_diesel_clp_litro: float | None
     tarifa_peajes_clp_km: float | None
     costo_operacion_clp_km: float | None
+    viatico_diario_clp: float | None
     tarifa_venta_clp_ton_km: float | None
     costo_diesel_clp: float | None
     costo_peajes_clp: float | None
     costo_operacion_clp: float | None
+    costo_viatico_clp: float | None
     ingreso_total_clp: float | None
     margen_clp: float | None
     margen_porcentaje: float | None
@@ -76,10 +78,12 @@ class ViajeType:
             precio_diesel_clp_litro=_float(v.precio_diesel_clp_litro),
             tarifa_peajes_clp_km=_float(v.tarifa_peajes_clp_km),
             costo_operacion_clp_km=_float(v.costo_operacion_clp_km),
+            viatico_diario_clp=_float(v.viatico_diario_clp),
             tarifa_venta_clp_ton_km=_float(v.tarifa_venta_clp_ton_km),
             costo_diesel_clp=_float(v.costo_diesel_clp),
             costo_peajes_clp=_float(v.costo_peajes_clp),
             costo_operacion_clp=_float(v.costo_operacion_clp),
+            costo_viatico_clp=_float(v.costo_viatico_clp),
             ingreso_total_clp=_float(v.ingreso_total_clp),
             margen_clp=_float(v.margen_clp),
             margen_porcentaje=_float(v.margen_porcentaje),

@@ -9,6 +9,7 @@ import {
   quitarPedidoDeCarga,
 } from '../api/carga.api';
 import { EmptyState } from '../components/common/EmptyState';
+import { PageHeader } from '../components/common/PageHeader';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { Toast } from '../components/ui/Toast';
@@ -42,7 +43,14 @@ export const CargasPage: React.FC = () => {
 
   // Cada acción que modifica datos incrementa `version` para refrescar.
   const [version, setVersion] = useState(0);
-  const recargar = useCallback(() => setVersion((v) => v + 1), []);
+  const recargar = useCallback(() => {
+    setCargando(true);
+    setVersion((v) => v + 1);
+  }, []);
+  const cambiarEstado = (nuevoEstado: CargaEstado | '') => {
+    setCargando(true);
+    setEstado(nuevoEstado);
+  };
 
   // Total sin filtros, para el "Mostrando X de N cargas".
   useEffect(() => {
@@ -55,7 +63,6 @@ export const CargasPage: React.FC = () => {
 
   useEffect(() => {
     const control = new AbortController();
-    setCargando(true);
     getCargas(estado, control.signal)
       .then((data) => {
         setCargas(data);
@@ -95,7 +102,7 @@ export const CargasPage: React.FC = () => {
     <EmptyState
       icon={<FilterX size={36} />}
       title="Ninguna carga está en ese estado"
-      action={<Button onClick={() => setEstado('')}>Ver todas</Button>}
+      action={<Button onClick={() => cambiarEstado('')}>Ver todas</Button>}
     />
   ) : (
     <EmptyState
@@ -110,19 +117,12 @@ export const CargasPage: React.FC = () => {
     <div className="page-view-enter stack-lg">
       <Toast message={toast} />
 
-      <div className="page-header">
-        <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Boxes color="var(--accent-primary)" /> Cargas
-          </h1>
-          <p className="text-muted">
-            Agrupación de pedidos, validación de compatibilidad y ocupación por camión
-          </p>
-        </div>
-        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setModalAbierto(true)}>
-          Crear carga
-        </Button>
-      </div>
+      <PageHeader
+        title="Cargas"
+        icon={<Boxes size={22} />}
+        description="Agrupación de pedidos, validación de compatibilidad y ocupación por camión"
+        actions={<Button variant="primary" icon={<Plus size={16} />} onClick={() => setModalAbierto(true)}>Crear carga</Button>}
+      />
 
       <div className="glass-panel filters-panel">
         <div className="filters-row">
@@ -135,7 +135,7 @@ export const CargasPage: React.FC = () => {
                 ...ESTADO_CARGA_OPCIONES.map((e) => ({ value: e.valor, label: e.label })),
               ]}
               highlighted={estado !== ''}
-              onChange={(v) => setEstado(v as CargaEstado | '')}
+              onChange={(v) => cambiarEstado(v as CargaEstado | '')}
               minWidth="200px"
             />
           </div>

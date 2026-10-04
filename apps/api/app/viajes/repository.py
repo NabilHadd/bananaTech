@@ -1,10 +1,11 @@
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, col
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Camion, ClaseLicencia, Cliente, Conductor, Licencia
 from app.models.pedido import Carga, Pedido
 from app.models.viaje import Viaje
+
 
 class ViajeRepository:
   def __init__(self, session: AsyncSession) -> None:

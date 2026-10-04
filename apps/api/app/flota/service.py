@@ -14,7 +14,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core import tiempo
 from app.core.errors import DomainError
-from app.flota.repository import CamionRepository, TipoCamionRepository, ViajeCamionRepository
+from app.flota.repository import (
+    CamionRepository,
+    TipoCamionRepository,
+    ViajeCamionRepository,
+)
 from app.models import Camion, CargaEstado, Documento, DocumentoTipo, TipoCamion, Viaje
 
 # Sin estos tres vigentes el camión no puede asignarse a un viaje (HU1.2).

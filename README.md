@@ -6,11 +6,17 @@ ERP de transporte: API GraphQL en Python (`apps/api`) y frontend en React (`apps
 
 ```bash
 cp .env.example .env    # sólo la primera vez
+# Define ADMIN_PASSWORD y un AUTH_SECRET aleatorio en .env antes de iniciar.
 docker compose up -d    # levanta db (PostgreSQL) y api
+docker compose exec api uv run --no-dev alembic upgrade head
 ```
 
 - GraphQL: http://localhost:8000/graphql
 - PostgreSQL: `localhost:5433`
+- Inicio de sesión: http://localhost:5173/login. El administrador inicial se
+  crea al arrancar la API si `ADMIN_USERNAME` y `ADMIN_PASSWORD` están definidos.
+- Usuarios Planificador pueden operar la aplicación; usuarios, parámetros y
+  reportes de costos requieren rol Administrador.
 
 El frontend corre fuera de Docker:
 
@@ -30,19 +36,19 @@ docker compose exec api uv run --no-dev alembic upgrade head
 
 ## Costos de viajes
 
-La API toma los precios configurables del entorno al iniciar cada viaje y guarda
-una copia en ese viaje para conservar el cálculo histórico. Los valores iniciales
-son referencias editables en `.env`: diésel `1300 CLP/L`, peajes `50 CLP/km`,
-operación `300 CLP/km` y cobro `250 CLP/ton-km`. Para aplicar cambios de entorno,
-reinicia el servicio API. No son cotizaciones de mercado ni tarifas de una ruta real.
+Los parámetros iniciales se cargan desde `.env` a la base en el primer arranque.
+Luego se modifican desde Parámetros y rigen sin reiniciar la API. Cada cambio
+registra quién lo realizó, cuándo y los valores anterior y nuevo. Los viajes
+conservan la copia económica aplicada al crearse. El reporte mensual agrupa por
+fecha de inicio e incluye ingresos, combustible, peajes, desgaste, viáticos y margen.
+Los valores iniciales son referencias, no cotizaciones de mercado ni tarifas reales.
 
 El diésel se estima como `distancia / rendimiento del camión * precio`; peajes y
 operación usan sus tarifas por kilómetro. El cobro suma `toneladas de pedidos *
 distancia * tarifa`. Al finalizar, el margen es ingresos menos esos tres costos.
 Por ejemplo, 4 toneladas a 400 km generan $400.000 de ingreso; con rendimiento
 de 3 km/L, los costos de referencia suman $313.333 y el margen estimado es
-$86.667 (21,7%). La interfaz administrativa para editar estos parámetros desde
-la aplicación queda para una historia posterior.
+$86.667 (21,7%). Estos parámetros se administran ahora desde la sección Parámetros.
 
 ## Bajar el entorno
 

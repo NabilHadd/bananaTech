@@ -11,8 +11,8 @@ from app.conductores.service import (
 	EstadoConductor,
 )
 from app.core import tiempo
-from app.core.config import get_settings
 from app.core.errors import DomainError
+from app.core.parameters import leer_parametro
 from app.flota.service import (
 	CamionEvaluado,
 	EstadoCamion,
@@ -160,13 +160,20 @@ class ViajesService:
 		conductor = await self.conductores.verificar_asignable(
 			id_conductor, camion.id_tipo_camion, hasta=fin.date()
 		)
-		settings = get_settings()
+		precio_diesel = await leer_parametro(self.session, "precio_diesel_clp_litro")
+		tarifa_peajes = await leer_parametro(self.session, "tarifa_peajes_clp_km")
+		costo_operacion = await leer_parametro(self.session, "costo_operacion_clp_km")
+		tarifa_venta = await leer_parametro(self.session, "tarifa_venta_clp_ton_km")
+		viatico_diario = await leer_parametro(self.session, "viatico_diario_clp")
+		dias_viaje = max(1, (fin.date() - inicio.date()).days + 1)
 		costos = estimar_costos(
 			carga.centro.distancia_km,
 			camion.rendimiento_base_km_l,
-			settings.precio_diesel_clp_litro,
-			settings.tarifa_peajes_clp_km,
-			settings.costo_operacion_clp_km,
+			precio_diesel,
+			tarifa_peajes,
+			costo_operacion,
+			viatico_diario,
+			dias_viaje,
 		)
 
 		viaje = Viaje(
@@ -175,13 +182,15 @@ class ViajesService:
 			id_conductor=conductor.id,
 			fecha_inicio=inicio,
 			fecha_fin=fin,
-			precio_diesel_clp_litro=settings.precio_diesel_clp_litro,
-			tarifa_peajes_clp_km=settings.tarifa_peajes_clp_km,
-			costo_operacion_clp_km=settings.costo_operacion_clp_km,
-			tarifa_venta_clp_ton_km=settings.tarifa_venta_clp_ton_km,
+			precio_diesel_clp_litro=precio_diesel,
+			tarifa_peajes_clp_km=tarifa_peajes,
+			costo_operacion_clp_km=costo_operacion,
+			viatico_diario_clp=viatico_diario,
+			tarifa_venta_clp_ton_km=tarifa_venta,
 			costo_diesel_clp=costos.costo_diesel_clp,
 			costo_peajes_clp=costos.costo_peajes_clp,
 			costo_operacion_clp=costos.costo_operacion_clp,
+			costo_viatico_clp=costos.costo_viatico_clp,
 		)
 		await self.viajes.agregar(viaje)
 		await self.session.flush()
@@ -201,22 +210,32 @@ class ViajesService:
 		viaje.receptor = receptor.strip()
 		viaje.observacion = observacion.strip() if observacion and observacion.strip() else None
 		if viaje.precio_diesel_clp_litro is None:
-			settings = get_settings()
-			viaje.precio_diesel_clp_litro = settings.precio_diesel_clp_litro
-			viaje.tarifa_peajes_clp_km = settings.tarifa_peajes_clp_km
-			viaje.costo_operacion_clp_km = settings.costo_operacion_clp_km
-			viaje.tarifa_venta_clp_ton_km = settings.tarifa_venta_clp_ton_km
+			viaje.precio_diesel_clp_litro = await leer_parametro(self.session, "precio_diesel_clp_litro")
+			viaje.tarifa_peajes_clp_km = await leer_parametro(self.session, "tarifa_peajes_clp_km")
+			viaje.costo_operacion_clp_km = await leer_parametro(self.session, "costo_operacion_clp_km")
+			viaje.tarifa_venta_clp_ton_km = await leer_parametro(self.session, "tarifa_venta_clp_ton_km")
 		if viaje.costo_diesel_clp is None:
+			viatico_diario = await leer_parametro(self.session, "viatico_diario_clp")
+			viaje.viatico_diario_clp = viatico_diario
 			costos_estimados = estimar_costos(
 				viaje.carga.centro.distancia_km,
 				viaje.camion.rendimiento_base_km_l,
 				viaje.precio_diesel_clp_litro,
 				viaje.tarifa_peajes_clp_km,
 				viaje.costo_operacion_clp_km,
+				viatico_diario,
+				max(1, (viaje.fecha_fin.date() - viaje.fecha_inicio.date()).days + 1),
 			)
 			viaje.costo_diesel_clp = costos_estimados.costo_diesel_clp
 			viaje.costo_peajes_clp = costos_estimados.costo_peajes_clp
 			viaje.costo_operacion_clp = costos_estimados.costo_operacion_clp
+			viaje.costo_viatico_clp = costos_estimados.costo_viatico_clp
+		if viaje.costo_viatico_clp is None:
+			viatico_diario = await leer_parametro(self.session, "viatico_diario_clp")
+			viaje.viatico_diario_clp = viaje.viatico_diario_clp or viatico_diario
+			viaje.costo_viatico_clp = viatico_diario * max(
+				1, (viaje.fecha_fin.date() - viaje.fecha_inicio.date()).days + 1
+			)
 		ingreso = calcular_ingreso(
 			sum((pedido.peso_kg for pedido in viaje.carga.pedidos), Decimal(0)),
 			viaje.carga.centro.distancia_km,
@@ -229,6 +248,7 @@ class ViajesService:
 				viaje.costo_diesel_clp,
 				viaje.costo_peajes_clp,
 				viaje.costo_operacion_clp,
+				viaje.costo_viatico_clp,
 			),
 		)
 		self.cargas.al_finalizar_viaje(viaje.carga)

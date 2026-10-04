@@ -1,28 +1,27 @@
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.cliente import CentroDistribucion, Cliente
 
 
-class MercaderiaTipo(str, Enum):
+class MercaderiaTipo(StrEnum):
     GENERAL = "General"
     REFRIGERADA = "Refrigerada"
     PELIGROSA = "Peligrosa"
     FRAGIL = "Frágil"
 
 
-class PedidoEstado(str, Enum):
+class PedidoEstado(StrEnum):
     CREADA = "Creada"
     TRANSITO = "Transito"
     ENTREGADO = "Entregado"
     CANCELADO = "Cancelado"
 
 
-class CargaEstado(str, Enum):
+class CargaEstado(StrEnum):
     CREADA = "Creada"
     CONFIRMADA = "Confirmada"
     EN_RUTA = "En ruta"
@@ -43,7 +42,7 @@ class PedidoCarga(SQLModel, table=True):
 
 
 class Pedido(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     id_cliente: int = Field(foreign_key="cliente.id")
     id_centro: int = Field(foreign_key="centro_distribucion.id")
     peso_kg: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
@@ -57,16 +56,16 @@ class Pedido(SQLModel, table=True):
     estado: PedidoEstado = Field(default=PedidoEstado.CREADA)
 
     # Relaciones para navegación
-    cliente: Optional[Cliente] = Relationship()
-    centro: Optional[CentroDistribucion] = Relationship()
+    cliente: Cliente | None = Relationship()
+    centro: CentroDistribucion | None = Relationship()
 
     # Relación con Carga a través de PedidoCarga
-    cargas: list["Carga"] = Relationship(
+    cargas: list[Carga] = Relationship(
         back_populates="pedidos",
         link_model=PedidoCarga,
     )
 
-    def carga_activa(self) -> Optional["Carga"]:
+    def carga_activa(self) -> Carga | None:
         """La carga que retiene al pedido, si hay una. Requiere `cargas` cargado."""
         return next((c for c in self.cargas if c.estado in CARGA_ACTIVA), None)
 
@@ -76,7 +75,7 @@ class Carga(SQLModel, table=True):
     id_centro: int = Field(foreign_key="centro_distribucion.id")
     estado: CargaEstado
 
-    centro: Optional[CentroDistribucion] = Relationship()
+    centro: CentroDistribucion | None = Relationship()
     # Relación con Pedido a través de PedidoCarga
     pedidos: list[Pedido] = Relationship(
         back_populates="cargas",

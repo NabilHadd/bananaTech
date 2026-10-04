@@ -24,7 +24,7 @@ class PropuestaViajeType:
 	fecha_fin: datetime
 
 	@staticmethod
-	def from_dominio(propuesta: Propuesta) -> "PropuestaViajeType":
+	def from_dominio(propuesta: Propuesta) -> PropuestaViajeType:
 		return PropuestaViajeType(
 			carga=CargaType.from_model(propuesta.carga),
 			camion=CamionType.from_evaluado(propuesta.camion),
