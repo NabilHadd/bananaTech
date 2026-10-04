@@ -78,7 +78,7 @@ class CamionRepository:
 
 
 class ViajeCamionRepository:
-    """Viajes vistos desde el camión (historial de la HU1.3).
+    """Viajes vistos desde el camión (historial de la HU1.3 y estado En viaje).
 
     La gestión de viajes es de la E05; aquí sólo se leen.
     """
@@ -97,6 +97,25 @@ class ViajeCamionRepository:
             .order_by(col(Viaje.fecha_inicio).desc())
         )
         return list((await self.session.exec(stmt)).all())
+
+    async def en_ruta_por_camion(
+        self, id_camion: int | None = None
+    ) -> dict[int, Viaje]:
+        """Viaje en curso de cada camión: no cancelado y sin llegada registrada.
+
+        Con `id_camion`, sólo el de ese camión. Trae el conductor para el motivo.
+        """
+        stmt = (
+            select(Viaje)
+            .where(
+                col(Viaje.fecha_llegada).is_(None),
+                col(Viaje.fecha_cancelacion).is_(None),
+            )
+            .options(selectinload(Viaje.conductor))
+        )
+        if id_camion is not None:
+            stmt = stmt.where(Viaje.id_camion == id_camion)
+        return {v.id_camion: v for v in (await self.session.exec(stmt)).all()}
 
     async def centros_por_id(self, ids: set[int]) -> dict[int, CentroDistribucion]:
         # Carga no declara la relación con su centro, así que se buscan aparte.

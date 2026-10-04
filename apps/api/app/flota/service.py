@@ -14,8 +14,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core import tiempo
 from app.core.errors import DomainError
-from app.flota.repository import CamionRepository, TipoCamionRepository, ViajeCamionRepository
-from app.models import Camion, CargaEstado, Documento, DocumentoTipo, TipoCamion, Viaje
+from app.flota.repository import (
+    CamionRepository,
+    TipoCamionRepository,
+    ViajeCamionRepository,
+)
+from app.models import Camion, Documento, DocumentoTipo, TipoCamion, Viaje
 
 # Sin estos tres vigentes el camión no puede asignarse a un viaje (HU1.2).
 OBLIGATORIOS = (DocumentoTipo.RT, DocumentoTipo.PC, DocumentoTipo.SOAP)
@@ -37,6 +41,7 @@ ANIO_MINIMO = 1990
 
 class EstadoCamion(StrEnum):
     DISPONIBLE = "DISPONIBLE"
+    EN_VIAJE = "EN_VIAJE"
     BLOQUEADO = "BLOQUEADO"
     INACTIVO = "INACTIVO"
 
@@ -48,13 +53,13 @@ class EstadoViaje(StrEnum):
 
 
 def estado_viaje(viaje: Viaje) -> EstadoViaje:
-    """Estado de un viaje según su carga y su llegada; no se guarda.
+    """Estado de un viaje según su cancelación y su llegada; no se guarda.
 
     Un viaje sigue en ruta hasta que se registra su llegada, aunque se haya
     pasado su término previsto (`fecha_fin`). Lo usan el historial del camión
-    y el de los conductores (E02). Requiere la carga del viaje ya cargada.
+    y el de los conductores (E02).
     """
-    if viaje.carga.estado == CargaEstado.CANCELADA:
+    if viaje.fecha_cancelacion is not None:
         return EstadoViaje.CANCELADO
     if viaje.fecha_llegada is None:
         return EstadoViaje.EN_RUTA
@@ -154,15 +159,17 @@ class FlotaService:
             capacidad_min_kg=capacidad_min_kg,
         )
         hoy = tiempo.hoy()
-        evaluados = [self.evaluar(c, hoy) for c in camiones]
-        # El estado depende de la fecha de hoy, así que se filtra después de evaluar.
+        en_ruta = await self.viajes.en_ruta_por_camion()
+        evaluados = [self.evaluar(c, hoy, en_ruta.get(c.id)) for c in camiones]
+        # El estado depende de la fecha de hoy y de los viajes, así que se
+        # filtra después de evaluar.
         if estado is not None:
             evaluados = [e for e in evaluados if e.estado == estado]
         return evaluados
 
     async def obtener_camion(self, id: int) -> CamionEvaluado | None:
         camion = await self.camiones.obtener(id)
-        return self.evaluar(camion, tiempo.hoy()) if camion else None
+        return await self._evaluar_uno(camion) if camion else None
 
     async def historial(self, id_camion: int) -> HistorialCamion:
         camion = await self._camion_existente(id_camion)
@@ -232,6 +239,12 @@ class FlotaService:
         await self._validar_datos(datos)
         if await self.camiones.existe_patente(patente, excepto_id=id):
             raise DomainError(f"La patente {patente} ya está registrada")
+        # El odómetro sólo avanza: también lo incrementa cada viaje al finalizar.
+        if datos.kilometraje_actual < camion.kilometraje_actual:
+            raise DomainError(
+                f"El kilometraje no puede disminuir: el camión {camion.patente} "
+                f"ya registra {camion.kilometraje_actual:,} km".replace(",", ".")
+            )
 
         camion.patente = patente
         self._aplicar(camion, datos)
@@ -243,6 +256,12 @@ class FlotaService:
         camion = await self._camion_existente(id)
         if not camion.activo:
             raise DomainError(f"El camión {camion.patente} ya está dado de baja")
+        # Darlo de baja dejaría sin camión a su viaje en ruta.
+        if await self.viajes.en_ruta_por_camion(id):
+            raise DomainError(
+                f"El camión {camion.patente} está en un viaje en ruta; "
+                "finalícelo o cancélelo antes de darlo de baja"
+            )
         camion.activo = False
         await self.session.commit()
         return await self._evaluado(id)
@@ -280,12 +299,28 @@ class FlotaService:
             )
         return evaluado.camion
 
-    # ── Regla de estado (HU1.1 + HU1.2) ──────────────────────────────────────
+    # ── Regla de estado (HU1.1 + HU1.2 + HU5.2) ──────────────────────────────
 
-    def evaluar(self, camion: Camion, hoy: date) -> CamionEvaluado:
+    def evaluar(
+        self, camion: Camion, hoy: date, en_curso: Viaje | None
+    ) -> CamionEvaluado:
+        """Calcula el estado. `en_curso`: su viaje en ruta, si tiene (requiere el conductor).
+
+        Un viaje en curso manda sobre los documentos: si vencen durante el
+        viaje, el camión queda Bloqueado recién al llegar.
+        """
         if not camion.activo:
             return CamionEvaluado(
                 camion, EstadoCamion.INACTIVO, "Camión dado de baja.", hoy
+            )
+        if en_curso is not None:
+            c = en_curso.conductor
+            llegada = en_curso.fecha_fin.strftime("%Y-%m-%d %H:%M")
+            return CamionEvaluado(
+                camion,
+                EstadoCamion.EN_VIAJE,
+                f"En viaje con {c.nombres} {c.apellidos}, llegada prevista el {llegada}.",
+                hoy,
             )
 
         por_tipo = {d.tipo: d for d in camion.documentos}
@@ -312,7 +347,11 @@ class FlotaService:
         return camion
 
     async def _evaluado(self, id: int) -> CamionEvaluado:
-        return self.evaluar(await self._camion_existente(id), tiempo.hoy())
+        return await self._evaluar_uno(await self._camion_existente(id))
+
+    async def _evaluar_uno(self, camion: Camion) -> CamionEvaluado:
+        en_ruta = await self.viajes.en_ruta_por_camion(camion.id)
+        return self.evaluar(camion, tiempo.hoy(), en_ruta.get(camion.id))
 
     async def _commit(self, patente: str) -> None:
         # La consulta previa no cubre dos registros simultáneos con la misma

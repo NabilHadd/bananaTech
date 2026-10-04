@@ -21,6 +21,7 @@ from app.conductores.repository import (
 from app.core import tiempo
 from app.core.config import get_settings
 from app.core.errors import DomainError
+from app.core.telefono import normalizar_telefono
 from app.flota.service import ORIGEN_VIAJES, EstadoViaje, estado_viaje
 from app.models import ClaseLicencia, Conductor, Licencia, LicenciaClase, Viaje
 
@@ -285,28 +286,12 @@ class ConductoresService:
     ) -> Conductor:
         """Punto de entrada para la E05: rechaza conductores que no pueden viajar.
 
-        Exige que esté disponible (licencia vigente, sin viaje y descansado), que
-        su licencia habilite el tipo de camión (RN-04) y, si se indica `hasta`,
-        que siga vigente hasta el fin del viaje.
+        Las reglas están en `motivo_no_asignable`.
         """
         evaluado = await self._evaluado(id_conductor)
-        nombre = _nombre(evaluado.conductor)
-        if evaluado.estado != EstadoConductor.DISPONIBLE:
-            raise DomainError(f"{nombre} no puede asignarse: {evaluado.motivo_bloqueo}")
-
-        licencia = evaluado.licencia_actual
-        assert licencia is not None  # DISPONIBLE implica licencia vigente.
-        tipos = {t.id for c in licencia.clases for t in c.tipos_camion}
-        if id_tipo_camion not in tipos:
-            clases = ", ".join(sorted(c.clase.value for c in licencia.clases))
-            raise DomainError(
-                f"La licencia de {nombre} (clase {clases}) no habilita ese tipo de camión"
-            )
-        if hasta is not None and licencia.fecha_vencimiento.date() < hasta:
-            raise DomainError(
-                f"La licencia de {nombre} vence el "
-                f"{licencia.fecha_vencimiento.date().isoformat()}, antes del fin del viaje"
-            )
+        motivo = motivo_no_asignable(evaluado, id_tipo_camion, hasta)
+        if motivo:
+            raise DomainError(motivo)
         return evaluado.conductor
 
     # ── Regla de estado (HU2.1 + HU2.2) ──────────────────────────────────────
@@ -416,6 +401,7 @@ class ConductoresService:
             raise DomainError("Los nombres y apellidos son obligatorios")
         if not datos.telefono.strip():
             raise DomainError("El teléfono es obligatorio")
+        normalizar_telefono(datos.telefono)
         if not _FORMATO_EMAIL.match(datos.email.strip()):
             raise DomainError(f"El email {datos.email.strip()!r} no es válido")
 
@@ -443,7 +429,7 @@ class ConductoresService:
     def _aplicar(conductor: Conductor, datos: DatosConductor) -> None:
         conductor.nombres = datos.nombres.strip()
         conductor.apellidos = datos.apellidos.strip()
-        conductor.telefono = datos.telefono.strip()
+        conductor.telefono = normalizar_telefono(datos.telefono)
         conductor.email = datos.email.strip().lower()
 
 
@@ -477,6 +463,34 @@ def _digito_verificador(cuerpo: str) -> str:
 def _tiene_clase(evaluado: ConductorEvaluado, clase: LicenciaClase) -> bool:
     licencia = evaluado.licencia_actual
     return licencia is not None and any(c.clase == clase for c in licencia.clases)
+
+
+def motivo_no_asignable(
+    evaluado: ConductorEvaluado, id_tipo_camion: int, hasta: date | None = None
+) -> str | None:
+    """Por qué el conductor no puede llevar ese tipo de camión; None si puede.
+
+    Exige que esté disponible (licencia vigente, sin viaje y descansado), que
+    su licencia habilite el tipo de camión (RN-04) y, si se indica `hasta`,
+    que siga vigente hasta el fin del viaje. Es pura para que la E05 pueda
+    filtrar listas de conductores sin consultar la base por cada uno.
+    """
+    nombre = _nombre(evaluado.conductor)
+    if evaluado.estado != EstadoConductor.DISPONIBLE:
+        return f"{nombre} no puede asignarse: {evaluado.motivo_bloqueo}"
+
+    licencia = evaluado.licencia_actual
+    assert licencia is not None  # DISPONIBLE implica licencia vigente.
+    tipos = {t.id for c in licencia.clases for t in c.tipos_camion}
+    if id_tipo_camion not in tipos:
+        clases = ", ".join(sorted(c.clase.value for c in licencia.clases))
+        return f"La licencia de {nombre} (clase {clases}) no habilita ese tipo de camión"
+    if hasta is not None and licencia.fecha_vencimiento.date() < hasta:
+        return (
+            f"La licencia de {nombre} vence el "
+            f"{licencia.fecha_vencimiento.date().isoformat()}, antes del fin del viaje"
+        )
+    return None
 
 
 def _nombre(conductor: Conductor) -> str:

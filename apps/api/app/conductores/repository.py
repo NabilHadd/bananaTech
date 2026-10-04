@@ -10,7 +10,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.flota.repository import ViajeCamionRepository
 from app.models import (
     Carga,
-    CargaEstado,
     ClaseLicencia,
     Conductor,
     Licencia,
@@ -118,13 +117,9 @@ class ViajeConductorRepository(ViajeCamionRepository):
 
     async def tiene_viajes_en_ruta(self, id_conductor: int) -> bool:
         """Si tiene viajes no cancelados cuya llegada aún no se registra."""
-        stmt = (
-            select(Viaje.id)
-            .join(Carga, col(Carga.id) == Viaje.id_carga)
-            .where(
-                Viaje.id_conductor == id_conductor,
-                col(Viaje.fecha_llegada).is_(None),
-                Carga.estado != CargaEstado.CANCELADA,
-            )
+        stmt = select(Viaje.id).where(
+            Viaje.id_conductor == id_conductor,
+            col(Viaje.fecha_llegada).is_(None),
+            col(Viaje.fecha_cancelacion).is_(None),
         )
         return (await self.session.exec(stmt)).first() is not None

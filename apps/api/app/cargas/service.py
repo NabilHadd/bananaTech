@@ -8,7 +8,7 @@ Desde ahí la mueve el viaje (E05): En ruta al generarse, Finalizada al llegar.
 
 from dataclasses import dataclass
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from itertools import combinations
 
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -28,7 +28,7 @@ INCOMPATIBLES: dict[frozenset[MercaderiaTipo], str] = {
 }
 
 
-class FactorLimitante(str, Enum):
+class FactorLimitante(StrEnum):
     PESO = "Peso"
     VOLUMEN = "Volumen"
 
@@ -158,7 +158,8 @@ class CargasService:
     async def cancelar_carga(self, id_carga: int) -> Carga:
         """Cancela una carga que aún no sale; sus pedidos quedan libres para otra.
 
-        Una carga En ruta se cancela cancelando su viaje (HU5.3).
+        Una carga En ruta no: primero se cancela su viaje, que la devuelve a
+        Confirmada (HU5.3).
         """
         carga = await self._carga_existente(id_carga)
         if carga.estado not in (CargaEstado.CREADA, CargaEstado.CONFIRMADA):
@@ -225,8 +226,9 @@ class CargasService:
             p.estado = PedidoEstado.ENTREGADO
 
     def al_cancelar_viaje(self, carga: Carga) -> None:
-        # HU5.3: los pedidos vuelven a Creada y quedan libres para otra carga.
-        carga.estado = CargaEstado.CANCELADA
+        # HU5.3: la carga vuelve a Confirmada, lista para salir en otro viaje
+        # sin volver a armarla; sus pedidos dejan de estar en tránsito.
+        carga.estado = CargaEstado.CONFIRMADA
         for p in carga.pedidos:
             p.estado = PedidoEstado.CREADA
 

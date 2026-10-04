@@ -1,12 +1,14 @@
 """Reglas de negocio de pedidos (HU3.2)."""
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.clientes.repository import CentroDistribucionRepository, ClienteRepository
+from app.clientes.service import validar_destino
+from app.core.config import get_settings
 from app.core.errors import DomainError
 from app.models.pedido import MercaderiaTipo, Pedido, PedidoEstado
 from app.pedidos.repository import PedidoRepository
@@ -68,6 +70,9 @@ class PedidosService:
         # cuando intento guardarlo, entonces el sistema rechaza el registro."
         if datos.ventana_fin <= datos.ventana_inicio:
             raise DomainError("La ventana de entrega termina antes de comenzar.")
+        minima = get_settings().ventana_minima_horas
+        if datos.ventana_fin - datos.ventana_inicio < timedelta(hours=minima):
+            raise DomainError(f"La ventana de entrega debe durar al menos {minima} horas.")
 
         # Verificar existencia del cliente
         cliente = await self.clientes.obtener(datos.id_cliente)
@@ -78,6 +83,7 @@ class PedidosService:
         centro = await self.centros.obtener(datos.id_centro)
         if not centro:
             raise DomainError(f"El centro de distribución con ID {datos.id_centro} no existe.")
+        validar_destino(centro.direccion, centro.distancia_km, centro.distancia_min)
 
         # Validar que el centro pertenezca al cliente
         centros_cliente_ids = [c.id for c in (cliente.centros or [])]

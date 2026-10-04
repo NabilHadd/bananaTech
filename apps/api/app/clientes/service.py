@@ -14,9 +14,23 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.clientes.repository import CentroDistribucionRepository, ClienteRepository
 from app.conductores.service import normalizar_rut
 from app.core.errors import DomainError
+from app.core.telefono import normalizar_telefono
 from app.models import CentroDistribucion, Cliente
 
 _FORMATO_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def validar_destino(direccion: str, distancia_km: Decimal, distancia_min: int) -> None:
+    """Un destino debe estar lejos de la base, que es el origen de todo viaje.
+
+    Las distancias se miden desde la base: con 0 km o 0 min el destino sería
+    la base misma, y un envío a ella no tiene sentido.
+    """
+    if distancia_km <= 0 or distancia_min <= 0:
+        raise DomainError(
+            f"El destino {direccion!r} debe estar a más de 0 km y 0 min de la base: "
+            "la base es el origen de los viajes, no un destino"
+        )
 
 
 @dataclass
@@ -63,9 +77,11 @@ class ClientesService:
     async def listar_centros(
         self, *, busqueda: str | None = None
     ) -> list[CentroDistribucion]:
-        return await self.centros.listar(
+        centros = await self.centros.listar(
             busqueda=busqueda.strip() if busqueda else None
         )
+        # La base quedó registrada como centro en datos antiguos: no se ofrece.
+        return [c for c in centros if c.distancia_km > 0 and c.distancia_min > 0]
 
     # ── Comandos (HU3.1) ─────────────────────────────────────────────────────
 
@@ -73,10 +89,7 @@ class ClientesService:
         """Registra un centro de distribución nuevo o actualiza sus distancias."""
         if not datos.direccion.strip():
             raise DomainError("La dirección del centro de distribución es obligatoria")
-        if datos.distancia_km < 0:
-            raise DomainError("La distancia no puede ser negativa")
-        if datos.distancia_min < 0:
-            raise DomainError("El tiempo estimado de viaje no puede ser negativo")
+        validar_destino(datos.direccion.strip(), datos.distancia_km, datos.distancia_min)
 
         centro = await self._asegurar_centro(
             datos.direccion.strip(), datos.distancia_km, datos.distancia_min
@@ -96,7 +109,11 @@ class ClientesService:
         if mail_limpio and await self.clientes.existe_mail(mail_limpio):
             raise DomainError(f"El correo {mail_limpio} ya está registrado")
 
-        telefono_limpio = datos.telefono.strip() if datos.telefono and datos.telefono.strip() else None
+        telefono_limpio = (
+            normalizar_telefono(datos.telefono)
+            if datos.telefono and datos.telefono.strip()
+            else None
+        )
         if telefono_limpio and await self.clientes.existe_telefono(telefono_limpio):
             raise DomainError(f"El teléfono {telefono_limpio} ya está registrado")
 
@@ -113,6 +130,8 @@ class ClientesService:
         centros_a_asignar: list[CentroDistribucion] = []
         if datos.centros_ids:
             centros_existentes = await self.centros.obtener_por_ids(datos.centros_ids)
+            for c in centros_existentes:
+                validar_destino(c.direccion, c.distancia_km, c.distancia_min)
             centros_a_asignar.extend(centros_existentes)
 
         for cn in datos.centros_nuevos:
@@ -141,7 +160,11 @@ class ClientesService:
         if mail_limpio and await self.clientes.existe_mail(mail_limpio, excepto_id=id):
             raise DomainError(f"El correo {mail_limpio} ya está registrado")
 
-        telefono_limpio = datos.telefono.strip() if datos.telefono and datos.telefono.strip() else None
+        telefono_limpio = (
+            normalizar_telefono(datos.telefono)
+            if datos.telefono and datos.telefono.strip()
+            else None
+        )
         if telefono_limpio and await self.clientes.existe_telefono(telefono_limpio, excepto_id=id):
             raise DomainError(f"El teléfono {telefono_limpio} ya está registrado")
 
@@ -156,6 +179,8 @@ class ClientesService:
         centros_a_asignar: list[CentroDistribucion] = []
         if datos.centros_ids:
             centros_existentes = await self.centros.obtener_por_ids(datos.centros_ids)
+            for c in centros_existentes:
+                validar_destino(c.direccion, c.distancia_km, c.distancia_min)
             centros_a_asignar.extend(centros_existentes)
 
         for cn in datos.centros_nuevos:
@@ -217,7 +242,4 @@ class ClientesService:
         for cn in datos.centros_nuevos:
             if not cn.direccion.strip():
                 raise DomainError("La dirección del centro de distribución es obligatoria")
-            if cn.distancia_km < 0:
-                raise DomainError("La distancia no puede ser negativa")
-            if cn.distancia_min < 0:
-                raise DomainError("El tiempo estimado de viaje no puede ser negativo")
+            validar_destino(cn.direccion.strip(), cn.distancia_km, cn.distancia_min)

@@ -19,20 +19,19 @@ Revises: b5c1e8d4f7a2
 Create Date: 2026-09-30 18:00:00.000000
 
 """
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
-
 
 # revision identifiers, used by Alembic.
 revision: str = 'c7e2a9f4b1d3'
-down_revision: Union[str, None] = 'b5c1e8d4f7a2'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'b5c1e8d4f7a2'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # asyncpg exige el tipo real de las columnas enum; ya existen, no se recrean.
 mercaderia_t = postgresql.ENUM(

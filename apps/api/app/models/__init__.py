@@ -11,28 +11,35 @@ from app.models.conductor import (
     LicenciaClase,
     LicenciaClaseLink,
 )
-from app.models.pedido import Carga, CargaEstado, MercaderiaTipo, Pedido, PedidoCarga, PedidoEstado
+from app.models.pedido import (
+    Carga,
+    CargaEstado,
+    MercaderiaTipo,
+    Pedido,
+    PedidoCarga,
+    PedidoEstado,
+)
 from app.models.viaje import Viaje
 
 __all__ = [
     "Camion",
-    "TipoCamion",
-    "Documento",
-    "DocumentoTipo",
-    "Cliente",
+    "Carga",
+    "CargaEstado",
     "CentroDistribucion",
+    "ClaseLicencia",
+    "ClaseLicenciaTipoCamion",
+    "Cliente",
     "ClienteCentro",
     "Conductor",
+    "Documento",
+    "DocumentoTipo",
     "Licencia",
-    "ClaseLicencia",
     "LicenciaClase",
     "LicenciaClaseLink",
-    "ClaseLicenciaTipoCamion",
-    "Pedido",
-    "Carga",
-    "PedidoCarga",
     "MercaderiaTipo",
+    "Pedido",
+    "PedidoCarga",
     "PedidoEstado",
-    "CargaEstado",
+    "TipoCamion",
     "Viaje",
 ]

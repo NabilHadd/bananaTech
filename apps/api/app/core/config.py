@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     app_name: str = "bananaTech API"
     debug: bool = True
     # Origen del frontend de Vite, necesario para CORS en producción
-    cors_origins: list[str] = ["http://localhost:5174"]
+    cors_origins: list[str] = ["http://localhost:5173"]
     # URL de conexión a la base de datos PostgreSQL
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/erp"
     # Zona de la operación. Las fechas de la base no guardan zona y el
@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Horas que un conductor debe descansar tras terminar un viaje (RN-06,
     # HU2.1). Cuando exista el panel de parámetros (HU7.2) se leerá de la base.
     descanso_minimo_horas: int = 8
+    # Duración mínima de la ventana de entrega de un pedido (HU3.2): una
+    # ventana más corta no deja margen para planificar el viaje.
+    ventana_minima_horas: int = 24
 
 
 @lru_cache

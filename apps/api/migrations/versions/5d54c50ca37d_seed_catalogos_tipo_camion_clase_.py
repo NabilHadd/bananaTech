@@ -6,20 +6,17 @@ Create Date: 2026-09-18 00:50:26.121996
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-import sqlmodel
-
-
 # revision identifiers, used by Alembic.
 revision: str = '5d54c50ca37d'
-down_revision: Union[str, None] = '00b9140141e9'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '00b9140141e9'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 LICENCIA_CLASES = ["A1", "A2", "A3", "A4", "A5", "B", "C", "D", "E", "F"]
