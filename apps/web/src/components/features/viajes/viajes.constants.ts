@@ -17,6 +17,15 @@ export const formatearDuracion = (minutos: number) => {
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 };
 
+export const formatearCLP = (valor: number | null) =>
+  valor === null
+    ? 'Pendiente'
+    : new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: 'CLP',
+        maximumFractionDigits: 0,
+      }).format(valor);
+
 export const nombreConductor = (c: Conductor) => `${c.nombres} ${c.apellidos}`;
 
 export const ESTADO_VIAJE_OPCIONES: SelectOption[] = [

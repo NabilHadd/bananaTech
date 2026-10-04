@@ -1,3 +1,4 @@
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
@@ -40,6 +41,11 @@ class Settings(BaseSettings):
     # Horas que un conductor debe descansar tras terminar un viaje (RN-06,
     # HU2.1). Cuando exista el panel de parámetros (HU7.2) se leerá de la base.
     descanso_minimo_horas: int = 8
+    # Valores iniciales de referencia en CLP; los viajes guardan una copia al iniciar.
+    precio_diesel_clp_litro: Decimal = Decimal(1300)
+    tarifa_peajes_clp_km: Decimal = Decimal(50)
+    costo_operacion_clp_km: Decimal = Decimal(300)
+    tarifa_venta_clp_ton_km: Decimal = Decimal(250)
 
 
 @lru_cache

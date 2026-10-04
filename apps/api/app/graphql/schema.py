@@ -10,14 +10,15 @@ from app.core.errors import DomainError
 from app.flota.schema import FlotaMutation, FlotaQuery
 from app.graphql.extensions import SesionSerializada
 from app.pedidos.schema import PedidosMutation, PedidosQuery
+from app.viajes.schema import ViajesMutation, ViajesQuery
 
 # Cada épica aporta su Query y su Mutation; aquí se unen en un solo schema.
 Query = merge_types(
-    "Query", (FlotaQuery, ConductoresQuery, ClientesQuery, PedidosQuery, CargasQuery)
+    "Query", (FlotaQuery, ConductoresQuery, ClientesQuery, PedidosQuery, CargasQuery, ViajesQuery)
 )
 Mutation = merge_types(
     "Mutation",
-    (FlotaMutation, ConductoresMutation, ClientesMutation, PedidosMutation, CargasMutation),
+    (FlotaMutation, ConductoresMutation, ClientesMutation, PedidosMutation, CargasMutation, ViajesMutation),
 )
 
 

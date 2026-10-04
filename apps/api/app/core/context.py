@@ -29,6 +29,8 @@ from app.pedidos.service import PedidosService
 
 from app.cargas.repository import CargaRepository
 from app.cargas.service import CargasService
+from app.viajes.repository import ViajeRepository
+from app.viajes.service import ViajesService
 
 
 class Context(BaseContext):
@@ -53,6 +55,7 @@ class Context(BaseContext):
         viaje_conductor_repo = ViajeConductorRepository(session)
         clase_licencia_repo = ClaseLicenciaRepository(session)
         cargas_repo = CargaRepository(session)
+        viajes_repo = ViajeRepository(session)
         
 
 
@@ -83,6 +86,13 @@ class Context(BaseContext):
             session,
             cargas_repo,
             camion_repo,
+        )
+        self.viajes = ViajesService(
+            session,
+            viajes_repo,
+            self.cargas,
+            self.flota,
+            self.conductores,
         )
 
 

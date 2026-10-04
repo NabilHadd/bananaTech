@@ -28,6 +28,22 @@ Después de cada `git pull`, lleva la base al head:
 docker compose exec api uv run --no-dev alembic upgrade head
 ```
 
+## Costos de viajes
+
+La API toma los precios configurables del entorno al iniciar cada viaje y guarda
+una copia en ese viaje para conservar el cálculo histórico. Los valores iniciales
+son referencias editables en `.env`: diésel `1300 CLP/L`, peajes `50 CLP/km`,
+operación `300 CLP/km` y cobro `250 CLP/ton-km`. Para aplicar cambios de entorno,
+reinicia el servicio API. No son cotizaciones de mercado ni tarifas de una ruta real.
+
+El diésel se estima como `distancia / rendimiento del camión * precio`; peajes y
+operación usan sus tarifas por kilómetro. El cobro suma `toneladas de pedidos *
+distancia * tarifa`. Al finalizar, el margen es ingresos menos esos tres costos.
+Por ejemplo, 4 toneladas a 400 km generan $400.000 de ingreso; con rendimiento
+de 3 km/L, los costos de referencia suman $313.333 y el margen estimado es
+$86.667 (21,7%). La interfaz administrativa para editar estos parámetros desde
+la aplicación queda para una historia posterior.
+
 ## Bajar el entorno
 
 ```bash

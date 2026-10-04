@@ -10,7 +10,7 @@ import { MercaderiaBadge } from '../pedidos/PedidoBadges';
 import { AsignacionResumen } from './AsignacionResumen';
 import { FinalizarViajeModal } from './FinalizarViajeModal';
 import type { LlegadaInput, Viaje } from './types';
-import { codigoViaje, formatearFecha } from './viajes.constants';
+import { codigoViaje, formatearCLP, formatearFecha } from './viajes.constants';
 
 const accent = 'var(--accent-primary)';
 
@@ -52,6 +52,11 @@ export const ViajeDetalleModal: React.FC<ViajeDetalleModalProps> = ({
   };
 
   const destino = v.carga.centro?.direccion ?? `centro #${v.carga.idCentro}`;
+  const costoTotal = [v.costoDieselClp, v.costoPeajesClp, v.costoOperacionClp].every(
+    (costo): costo is number => costo !== null,
+  )
+    ? v.costoDieselClp! + v.costoPeajesClp! + v.costoOperacionClp!
+    : null;
   const kpis = [
     { label: 'Pedidos', icon: <Package size={14} />, value: v.carga.pedidos.length, unit: '' },
     { label: 'Peso', icon: <Scale size={14} />, value: formatearNumero(v.carga.pesoTotalKg), unit: 'kg' },
@@ -125,6 +130,20 @@ export const ViajeDetalleModal: React.FC<ViajeDetalleModalProps> = ({
           </div>
 
           <AsignacionResumen camion={v.camion} conductor={v.conductor} />
+
+          {costoTotal !== null && (
+            <div className="info-grid">
+              <InfoTile label="Ingreso por pedidos" value={formatearCLP(v.ingresoTotalClp)} />
+              <InfoTile label="Diésel estimado" value={formatearCLP(v.costoDieselClp)} />
+              <InfoTile label="Peajes estimados" value={formatearCLP(v.costoPeajesClp)} />
+              <InfoTile label="Operación" value={formatearCLP(v.costoOperacionClp)} />
+              <InfoTile label="Costo total estimado" value={formatearCLP(costoTotal)} />
+              <InfoTile
+                label={v.margenClp === null ? 'Margen' : `Margen (${v.margenPorcentaje}%)`}
+                value={formatearCLP(v.margenClp)}
+              />
+            </div>
+          )}
 
           {v.fechaLlegada && (
             <div className="callout callout-success">

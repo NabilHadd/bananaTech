@@ -23,6 +23,16 @@ const VIAJE_CAMPOS = /* GraphQL */ `
     receptor
     observacion
     fechaCancelacion
+    precioDieselClpLitro
+    tarifaPeajesClpKm
+    costoOperacionClpKm
+    tarifaVentaClpTonKm
+    costoDieselClp
+    costoPeajesClp
+    costoOperacionClp
+    ingresoTotalClp
+    margenClp
+    margenPorcentaje
     conductor {
       ...ConductorCampos
     }

@@ -5,7 +5,7 @@ import type { Column } from '../../common/DataTable';
 import { codigoCarga, formatearNumero } from '../cargas/cargas.constants';
 import { ViajeEstadoBadge } from '../flota/FlotaBadges';
 import type { Viaje } from './types';
-import { codigoViaje, formatearFecha, nombreConductor } from './viajes.constants';
+import { codigoViaje, formatearCLP, formatearFecha, nombreConductor } from './viajes.constants';
 
 interface ViajeTableProps {
   viajes: Viaje[];
@@ -91,6 +91,28 @@ export const ViajeTable: React.FC<ViajeTableProps> = ({ viajes, onSelect, empty 
           <strong style={{ color: 'var(--text-primary)' }}>{formatearNumero(v.carga.volumenTotalM3)}</strong> m³
         </div>
       ),
+    },
+    {
+      key: 'economia',
+      header: 'Rentabilidad',
+      render: (v) => {
+        const costos = [v.costoDieselClp, v.costoPeajesClp, v.costoOperacionClp];
+        const costoTotal = costos.every((costo): costo is number => costo !== null)
+          ? costos.reduce((total, costo) => total + costo, 0)
+          : null;
+        return (
+          <div>
+            <div style={strong}>
+              {v.margenClp !== null
+                ? `Margen ${formatearCLP(v.margenClp)}`
+                : v.estado === 'EN_RUTA'
+                  ? 'Margen pendiente'
+                  : 'Margen no calculado'}
+            </div>
+            <div style={muted}>Costos estimados: {formatearCLP(costoTotal)}</div>
+          </div>
+        );
+      },
     },
     { key: 'estado', header: 'Estado', render: (v) => <ViajeEstadoBadge estado={v.estado} /> },
   ];

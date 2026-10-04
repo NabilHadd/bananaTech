@@ -1,14 +1,18 @@
 from datetime import datetime
+from decimal import Decimal
 
 import strawberry
 
-from app.conductores.types import ConductorType
-from app.flota.types import CamionType
 from app.cargas.types import CargaType
-
 from app.conductores.service import ConductorEvaluado
-from app.flota.service import CamionEvaluado
-
+from app.conductores.types import ConductorType
+from app.flota.service import (
+    ORIGEN_VIAJES,
+    CamionEvaluado,
+    EstadoViaje,
+    estado_viaje,
+)
+from app.flota.types import CamionType
 from app.models.viaje import Viaje
 
 
@@ -20,6 +24,9 @@ class ViajeType:
     id_carga: int
     fecha_inicio: datetime
     fecha_fin: datetime
+    estado: EstadoViaje
+    origen: str
+    fecha_cancelacion: datetime | None
     fecha_llegada: datetime | None = strawberry.field(
         default=None,
         description = "Llegada real del camion dado un viaje"
@@ -31,6 +38,16 @@ class ViajeType:
         default=None,
         description="Observación en torno al viaje."
     )
+    precio_diesel_clp_litro: float | None
+    tarifa_peajes_clp_km: float | None
+    costo_operacion_clp_km: float | None
+    tarifa_venta_clp_ton_km: float | None
+    costo_diesel_clp: float | None
+    costo_peajes_clp: float | None
+    costo_operacion_clp: float | None
+    ingreso_total_clp: float | None
+    margen_clp: float | None
+    margen_porcentaje: float | None
 
     conductor: ConductorType
     camion: CamionType
@@ -50,10 +67,27 @@ class ViajeType:
             id_carga=v.id_carga,
             fecha_inicio=v.fecha_inicio,
             fecha_fin=v.fecha_fin,
+            estado=estado_viaje(v),
+            origen=ORIGEN_VIAJES,
+            fecha_cancelacion=v.fecha_cancelacion,
             fecha_llegada=v.fecha_llegada,
             receptor=v.receptor,
             observacion=v.observacion,
+            precio_diesel_clp_litro=_float(v.precio_diesel_clp_litro),
+            tarifa_peajes_clp_km=_float(v.tarifa_peajes_clp_km),
+            costo_operacion_clp_km=_float(v.costo_operacion_clp_km),
+            tarifa_venta_clp_ton_km=_float(v.tarifa_venta_clp_ton_km),
+            costo_diesel_clp=_float(v.costo_diesel_clp),
+            costo_peajes_clp=_float(v.costo_peajes_clp),
+            costo_operacion_clp=_float(v.costo_operacion_clp),
+            ingreso_total_clp=_float(v.ingreso_total_clp),
+            margen_clp=_float(v.margen_clp),
+            margen_porcentaje=_float(v.margen_porcentaje),
             conductor=ConductorType.from_evaluado(conductor),
             camion=CamionType.from_evaluado(camion),
             carga=CargaType.from_model(v.carga),
         )
+
+
+def _float(valor: Decimal | None) -> float | None:
+    return float(valor) if valor is not None else None

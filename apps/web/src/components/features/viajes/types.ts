@@ -25,6 +25,16 @@ export interface Viaje {
   observacion: string | null;
   /** Cuándo se canceló; `null` si no se canceló. */
   fechaCancelacion: string | null;
+  precioDieselClpLitro: number | null;
+  tarifaPeajesClpKm: number | null;
+  costoOperacionClpKm: number | null;
+  tarifaVentaClpTonKm: number | null;
+  costoDieselClp: number | null;
+  costoPeajesClp: number | null;
+  costoOperacionClp: number | null;
+  ingresoTotalClp: number | null;
+  margenClp: number | null;
+  margenPorcentaje: number | null;
   conductor: Conductor;
   camion: Camion;
   carga: Carga;
