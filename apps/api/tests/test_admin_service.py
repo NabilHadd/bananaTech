@@ -136,6 +136,18 @@ async def test_actualizar_parametro_con_el_mismo_valor_no_audita(
     session.commit.assert_not_awaited()
 
 
+async def test_actualizar_parametro_redondea_a_dos_decimales(service, repo):
+    parametro = SimpleNamespace(valor=Decimal("1300.00"))
+    repo.obtener_parametro = AsyncMock(return_value=parametro)
+
+    await service.actualizar_parametro(
+        ADMIN, ActualizarParametroInput("precio_diesel_clp_litro", Decimal("1450.555"))
+    )
+
+    assert parametro.valor == Decimal("1450.56")
+    assert str(repo.agregar_auditoria.call_args.args[0].valor_nuevo) == "1450.56"
+
+
 # ── Reporte de costos (H6.x) ─────────────────────────────────────────────────
 
 
