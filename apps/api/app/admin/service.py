@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, datetime, time
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -165,18 +165,20 @@ class AdministracionService:
         parametro = await self.repository.obtener_parametro(data.clave)
         if parametro is None:
             raise DomainError("El parámetro no existe.")
-        if data.valor < 0 or data.valor > Decimal(1000000000000):
+        # La columna guarda 2 decimales: se redondea antes de comparar y auditar.
+        valor = data.valor.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if valor < 0 or valor > Decimal(1000000000000):
             raise DomainError("El valor debe ser positivo y estar dentro del rango permitido.")
-        if parametro.valor != data.valor:
+        if parametro.valor != valor:
             self.repository.agregar_auditoria(ParametroAuditoria(
                 clave=data.clave,
                 valor_anterior=parametro.valor,
-                valor_nuevo=data.valor,
+                valor_nuevo=valor,
                 cambiado_por=actor.id,
                 cambiado_por_username=actor.username,
                 cambiado_en=tiempo.ahora(),
             ))
-            parametro.valor = data.valor
+            parametro.valor = valor
             await self.session.commit()
         return parametro
 
