@@ -31,6 +31,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build -- --base=/bananaTech/
+        env:
+          VITE_API_URL: bananatech-api-d8aab7bucdc7h8h4.chilecentral-01.azurewebsites.net
       - run: cp dist/index.html dist/404.html
 
       - uses: actions/configure-pages@v6
