@@ -26,7 +26,9 @@ target_metadata = SQLModel.metadata
 
 # Set the sqlalchemy.url from our settings
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# ConfigParser trata "%" como interpolación: hay que escaparlo, o una
+# contraseña codificada en la URL (p. ej. "#" → "%23") rompe Alembic.
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:
